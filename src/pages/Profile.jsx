@@ -55,6 +55,12 @@ export default function Profile() {
     resetAll,
     addBodyRecord,
     clearAllRecords,
+    exportData,
+    importData,
+    currentUser,
+    registerAccount,
+    loginAccount,
+    logoutAccount,
   } = useStore()
 
   const [editingField, setEditingField] = useState(null) // 行内编辑（仅昵称）
@@ -69,6 +75,17 @@ export default function Profile() {
   const [showWeightInput, setShowWeightInput] = useState(false)
   const [showGenderPicker, setShowGenderPicker] = useState(false)
   const [showIdentityPicker, setShowIdentityPicker] = useState(false)
+  const [showLoginModal, setShowLoginModal] = useState(false)
+  const [showRegisterModal, setShowRegisterModal] = useState(false)
+
+  // 账户表单
+  const [loginUsername, setLoginUsername] = useState('')
+  const [loginPassword, setLoginPassword] = useState('')
+  const [regUsername, setRegUsername] = useState('')
+  const [regPassword, setRegPassword] = useState('')
+  const [regPassword2, setRegPassword2] = useState('')
+  const [authMsg, setAuthMsg] = useState('')
+  const [importMsg, setImportMsg] = useState('')
 
   // 数值型字段弹窗（身高、体重、年龄、目标体重）
   const [showNumberPicker, setShowNumberPicker] = useState(false)
@@ -375,12 +392,91 @@ export default function Profile() {
         </div>
       </div>
 
+      {/* 账户管理 */}
+      <div className="px-4 mt-4">
+        <div className="card">
+          <h3 className="text-sm font-semibold text-gray-700 mb-3">👤 账户</h3>
+          {currentUser ? (
+            <div className="space-y-2">
+              <p className="text-sm text-gray-600">
+                已登录：<span className="font-semibold text-primary-600">{currentUser}</span>
+              </p>
+              <p className="text-xs text-gray-400">数据会自动保存到该账户下</p>
+              <button
+                onClick={() => {
+                  if (confirm('确定要退出登录吗？退出前数据会自动保存。')) {
+                    logoutAccount()
+                  }
+                }}
+                className="w-full text-left text-sm text-orange-500 py-2"
+              >
+                🚪 退出登录
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <button
+                onClick={() => { setShowLoginModal(true); setAuthMsg('') }}
+                className="w-full text-left text-sm text-primary-600 py-2"
+              >
+                🔐 登录账户（保存数据）
+              </button>
+              <button
+                onClick={() => { setShowRegisterModal(true); setAuthMsg('') }}
+                className="w-full text-left text-sm text-primary-600 py-2"
+              >
+                ✨ 注册新账户
+              </button>
+              <p className="text-xs text-gray-400 pt-1">
+                注册后可在不同设备间通过登录恢复数据（当前为本地账户，数据保存在浏览器中）
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* 设置 */}
       <div className="px-4 mt-4 mb-4">
         <div className="card">
           <h3 className="text-sm font-semibold text-gray-700 mb-3">⚙️ 设置</h3>
           <div className="space-y-2">
-            <button className="w-full text-left text-sm text-gray-600 py-2">📤 数据导出</button>
+            <button
+              onClick={() => exportData()}
+              className="w-full text-left text-sm text-blue-600 py-2"
+            >
+              📤 导出数据（备份为 JSON 文件）
+            </button>
+            <label className="block w-full text-left text-sm text-blue-600 py-2 cursor-pointer">
+              📥 导入数据（从 JSON 文件恢复）
+              <input
+                type="file"
+                accept=".json,application/json"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  if (!file) return
+                  const reader = new FileReader()
+                  reader.onload = (ev) => {
+                    const text = ev.target?.result
+                    if (typeof text !== 'string') {
+                      setImportMsg('❌ 读取文件失败')
+                      return
+                    }
+                    const ok = importData(text)
+                    setImportMsg(ok ? '✅ 导入成功！' : '❌ 导入失败，请检查文件格式')
+                    setTimeout(() => setImportMsg(''), 3000)
+                  }
+                  reader.readAsText(file)
+                  e.target.value = ''
+                }}
+              />
+            </label>
+            {importMsg && (
+              <p className={`text-xs ${importMsg.startsWith('✅') ? 'text-green-600' : 'text-red-500'}`}>
+                {importMsg}
+              </p>
+            )}
+            <div className="border-t border-gray-100 my-2" />
             <button
               onClick={() => {
                 if (confirm('确定要清空所有饮食和体重记录吗？用户档案（身高、性别等）会保留。')) {
@@ -700,6 +796,136 @@ export default function Profile() {
                   <p className="font-semibold text-gray-800">{opt.label}</p>
                 </button>
               ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 登录弹窗 */}
+      {showLoginModal && (
+        <div className={modalOverlayClass} onClick={() => setShowLoginModal(false)}>
+          <div className={modalContainerClass} onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-bold mb-4">🔐 登录账户</h3>
+            <div className="space-y-3">
+              <input
+                type="text"
+                placeholder="用户名"
+                value={loginUsername}
+                onChange={(e) => setLoginUsername(e.target.value)}
+                className="w-full bg-gray-100 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary-300"
+              />
+              <input
+                type="password"
+                placeholder="密码"
+                value={loginPassword}
+                onChange={(e) => setLoginPassword(e.target.value)}
+                className="w-full bg-gray-100 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary-300"
+              />
+              {authMsg && (
+                <p className={`text-sm ${authMsg.startsWith('✅') ? 'text-green-600' : 'text-red-500'}`}>
+                  {authMsg}
+                </p>
+              )}
+              <button
+                onClick={() => {
+                  const res = loginAccount(loginUsername.trim(), loginPassword)
+                  setAuthMsg(res.success ? `✅ ${res.msg}` : `❌ ${res.msg}`)
+                  if (res.success) {
+                    setTimeout(() => setShowLoginModal(false), 800)
+                    setLoginUsername('')
+                    setLoginPassword('')
+                  }
+                }}
+                className="w-full bg-primary-500 text-white py-3 rounded-xl font-semibold active:scale-95 transition-transform"
+              >
+                登录
+              </button>
+              <p className="text-xs text-center text-gray-500">
+                还没有账户？
+                <button
+                  onClick={() => {
+                    setShowLoginModal(false)
+                    setShowRegisterModal(true)
+                    setAuthMsg('')
+                  }}
+                  className="text-primary-600 ml-1"
+                >
+                  去注册
+                </button>
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 注册弹窗 */}
+      {showRegisterModal && (
+        <div className={modalOverlayClass} onClick={() => setShowRegisterModal(false)}>
+          <div className={modalContainerClass} onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-bold mb-4">✨ 注册账户</h3>
+            <div className="space-y-3">
+              <input
+                type="text"
+                placeholder="用户名（至少2个字符）"
+                value={regUsername}
+                onChange={(e) => setRegUsername(e.target.value)}
+                className="w-full bg-gray-100 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary-300"
+              />
+              <input
+                type="password"
+                placeholder="密码（至少4个字符）"
+                value={regPassword}
+                onChange={(e) => setRegPassword(e.target.value)}
+                className="w-full bg-gray-100 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary-300"
+              />
+              <input
+                type="password"
+                placeholder="确认密码"
+                value={regPassword2}
+                onChange={(e) => setRegPassword2(e.target.value)}
+                className="w-full bg-gray-100 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary-300"
+              />
+              {authMsg && (
+                <p className={`text-sm ${authMsg.startsWith('✅') ? 'text-green-600' : 'text-red-500'}`}>
+                  {authMsg}
+                </p>
+              )}
+              <button
+                onClick={() => {
+                  if (regPassword !== regPassword2) {
+                    setAuthMsg('❌ 两次输入的密码不一致')
+                    return
+                  }
+                  const res = registerAccount(regUsername.trim(), regPassword)
+                  setAuthMsg(res.success ? `✅ ${res.msg}` : `❌ ${res.msg}`)
+                  if (res.success) {
+                    setTimeout(() => {
+                      setShowRegisterModal(false)
+                      setShowLoginModal(true)
+                      setLoginUsername(regUsername.trim())
+                    }, 800)
+                    setRegUsername('')
+                    setRegPassword('')
+                    setRegPassword2('')
+                  }
+                }}
+                className="w-full bg-primary-500 text-white py-3 rounded-xl font-semibold active:scale-95 transition-transform"
+              >
+                注册
+              </button>
+              <p className="text-xs text-center text-gray-500">
+                已有账户？
+                <button
+                  onClick={() => {
+                    setShowRegisterModal(false)
+                    setShowLoginModal(true)
+                    setAuthMsg('')
+                  }}
+                  className="text-primary-600 ml-1"
+                >
+                  去登录
+                </button>
+              </p>
             </div>
           </div>
         </div>
