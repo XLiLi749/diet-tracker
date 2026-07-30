@@ -12,12 +12,14 @@ export const getRecentDays = (n = 7) => {
 // 默认用户档案
 export const DEFAULT_PROFILE = {
   id: 'user_001',
-  nickname: '同学',
+  nickname: '用户',
   avatar: null,
   gender: 'male',
-  age: 20,
+  age: 28,
   height: 175,
   weight: 64.2,
+  identity: 'office_worker', // 身份/职业
+  profession: '办公室职员', // 自定义职业名称
   createdAt: '2026-06-01',
   updatedAt: dayjs().format('YYYY-MM-DD'),
 
