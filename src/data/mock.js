@@ -25,7 +25,7 @@ export const DEFAULT_PROFILE = {
 
   dietGoal: {
     type: 'fat_loss',
-    targetWeight: 62,
+    targetWeight: 62.1, // 身高175时BMI 22的理想体重
     startDate: '2026-06-01',
     expectedDurationMonths: 3,
   },
@@ -56,6 +56,55 @@ export const calcBMR = (gender, weight, height, age) => {
 export const calcBMI = (weight, height) => {
   const h = height / 100
   return (weight / (h * h)).toFixed(1)
+}
+
+// 计算标准/理想体重范围（基于 BMI）
+// 中国成人标准：偏瘦<18.5，正常18.5-23.9，偏胖24-27.9，肥胖≥28
+// 理想体重以 BMI 22 为中心（亚洲人群最健康的 BMI）
+export const calcIdealWeightRange = (height) => {
+  const h = height / 100
+  return {
+    minHealthy: Math.round(h * h * 18.5 * 10) / 10,   // BMI 18.5 下限
+    ideal: Math.round(h * h * 22 * 10) / 10,              // BMI 22 理想值
+    maxHealthy: Math.round(h * h * 23.9 * 10) / 10,       // BMI 23.9 上限
+    overweight: Math.round(h * h * 24 * 10) / 10,          // BMI 24 超重线
+  }
+}
+
+// 根据用户身体数据和目标，智能推荐目标体重
+export const calcSuggestedTargetWeight = (profile) => {
+  const { weight, height, dietGoal } = profile
+  const range = calcIdealWeightRange(height)
+  const currentBMI = parseFloat(calcBMI(weight, height))
+
+  switch (dietGoal.type) {
+    case 'fat_loss':
+      // 减脂：目标在健康范围内，取理想值偏下
+      if (currentBMI >= 24) {
+        // 超重，先目标到健康范围上限
+        return Math.round(range.maxHealthy * 10) / 10
+      } else if (currentBMI > 22) {
+        return range.ideal
+      }
+      // 已在理想范围，不建议再减太多
+      return Math.max(range.minHealthy, Math.round((weight - 2) * 10) / 10)
+
+    case 'muscle_gain':
+    case 'weight_gain':
+      // 增肌/增重：在健康范围内偏上
+      if (currentBMI < 18.5) {
+        return Math.round(range.minHealthy * 10) / 10
+      } else if (currentBMI < 22) {
+        return range.ideal
+      }
+      return Math.min(range.maxHealthy, Math.round((weight + 2) * 10) / 10)
+
+    case 'stomach_care':
+    case 'maintain':
+    default:
+      // 保持/养胃：理想体重
+      return range.ideal
+  }
 }
 
 // 计算活动系数
