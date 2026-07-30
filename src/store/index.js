@@ -335,6 +335,141 @@ const useStore = create(
           todayRecommendations: null,
         })
       },
+
+      // ========== 数据导出/导入 ==========
+      exportData: () => {
+        const state = get()
+        const data = {
+          version: 1,
+          exportAt: new Date().toISOString(),
+          profile: state.profile,
+          foodLogs: state.foodLogs,
+          bodyRecords: state.bodyRecords,
+          tastePreferences: state.tastePreferences,
+        }
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `diet-data-${dayjs().format('YYYYMMDD-HHmmss')}.json`
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+      },
+
+      importData: (jsonText) => {
+        try {
+          const data = JSON.parse(jsonText)
+          if (!data.profile || !data.foodLogs) {
+            throw new Error('文件格式不正确')
+          }
+          const newProfile = data.profile
+          const newTargets = calcDailyTargets(newProfile)
+          set({
+            profile: newProfile,
+            targets: newTargets,
+            foodLogs: data.foodLogs || {},
+            bodyRecords: data.bodyRecords || [],
+            tastePreferences: data.tastePreferences || [],
+            todayRecommendations: null,
+          })
+          return true
+        } catch (e) {
+          console.error('导入失败:', e)
+          return false
+        }
+      },
+
+      // ========== 账户管理（本地账户） ==========
+      currentUser: null,
+
+      // 简易字符串哈希（非加密安全，仅用于本地存储）
+      _hashPassword: (pwd) => {
+        let hash = 0
+        for (let i = 0; i < pwd.length; i++) {
+          const char = pwd.charCodeAt(i)
+          hash = ((hash << 5) - hash) + char
+          hash = hash & hash
+        }
+        return String(hash)
+      },
+
+      _getAccounts: () => {
+        try {
+          return JSON.parse(localStorage.getItem('diet-tracker-accounts') || '{}')
+        } catch {
+          return {}
+        }
+      },
+
+      _saveAccounts: (accounts) => {
+        localStorage.setItem('diet-tracker-accounts', JSON.stringify(accounts))
+      },
+
+      registerAccount: (username, password) => {
+        if (!username || !password) return { success: false, msg: '用户名和密码不能为空' }
+        if (username.length < 2) return { success: false, msg: '用户名至少2个字符' }
+        if (password.length < 4) return { success: false, msg: '密码至少4个字符' }
+        const accounts = get()._getAccounts()
+        if (accounts[username]) return { success: false, msg: '该用户名已存在' }
+        accounts[username] = {
+          passwordHash: get()._hashPassword(password),
+          createdAt: new Date().toISOString(),
+        }
+        get()._saveAccounts(accounts)
+        return { success: true, msg: '注册成功' }
+      },
+
+      loginAccount: (username, password) => {
+        const accounts = get()._getAccounts()
+        const account = accounts[username]
+        if (!account) return { success: false, msg: '用户名不存在' }
+        if (account.passwordHash !== get()._hashPassword(password)) {
+          return { success: false, msg: '密码错误' }
+        }
+        // 恢复该用户的数据（如果存在）
+        const savedData = localStorage.getItem(`diet-tracker-user-${username}`)
+        if (savedData) {
+          try {
+            const data = JSON.parse(savedData)
+            get().importData(JSON.stringify(data))
+          } catch (e) {
+            console.error('恢复用户数据失败:', e)
+          }
+        }
+        set({ currentUser: username })
+        localStorage.setItem('diet-tracker-current-user', username)
+        return { success: true, msg: '登录成功' }
+      },
+
+      logoutAccount: () => {
+        const { currentUser } = get()
+        if (currentUser) {
+          // 保存当前数据到该用户名下
+          const state = get()
+          const data = {
+            profile: state.profile,
+            foodLogs: state.foodLogs,
+            bodyRecords: state.bodyRecords,
+            tastePreferences: state.tastePreferences,
+          }
+          localStorage.setItem(`diet-tracker-user-${currentUser}`, JSON.stringify(data))
+        }
+        set({ currentUser: null })
+        localStorage.removeItem('diet-tracker-current-user')
+      },
+
+      autoLogin: () => {
+        const saved = localStorage.getItem('diet-tracker-current-user')
+        if (saved) {
+          set({ currentUser: saved })
+        }
+      },
+
+      listAccounts: () => {
+        return Object.keys(get()._getAccounts())
+      },
     }),
     {
       name: 'diet-tracker-storage',
