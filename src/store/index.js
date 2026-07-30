@@ -158,18 +158,51 @@ const useStore = create(
         const { profile, tastePreferences } = get()
         const date = dayjs().format('YYYY-MM-DD')
 
-        // 简单随机选择食谱 + 过滤忌口
-        const pickRandom = (arr) => arr[Math.floor(Math.random() * arr.length)]
+        // 根据口味偏好计算食谱匹配度得分
+        const scoreRecipe = (recipe) => {
+          const tags = recipe.tags || []
+          let score = 0
+          tastePreferences.forEach(pref => {
+            if (tags.includes(pref)) {
+              score += 10 // 匹配一个偏好得10分
+            }
+          })
+          // 加一点随机扰动，避免每次完全一样
+          score += Math.random() * 3
+          return score
+        }
+
+        // 智能选择：优先选匹配度高的食谱
+        const smartPick = (arr) => {
+          if (tastePreferences.length === 0) {
+            // 没有偏好，完全随机
+            return arr[Math.floor(Math.random() * arr.length)]
+          }
+          // 按匹配度排序
+          const scored = arr.map(r => ({ recipe: r, score: scoreRecipe(r) }))
+          scored.sort((a, b) => b.score - a.score)
+          // 从匹配度最高的前3个里随机选一个，增加多样性
+          const top = scored.slice(0, Math.min(3, scored.length))
+          return top[Math.floor(Math.random() * top.length)].recipe
+        }
 
         const filterByDislikes = (recipe) => {
           const dislikes = profile.restrictions.dislikes || []
-          return true // 简化：暂不做复杂过滤
+          const allergies = profile.restrictions.allergies || []
+          if (dislikes.length === 0 && allergies.length === 0) return true
+          const items = recipe.items || []
+          return !items.some(foodId => {
+            const food = getFoodById(foodId)
+            if (!food) return false
+            return dislikes.some(d => food.name.includes(d))
+              || allergies.some(a => food.name.includes(a))
+          })
         }
 
-        const breakfast = pickRandom(CANTEEN_RECIPES.breakfast.filter(filterByDislikes))
-        const lunch = pickRandom(CANTEEN_RECIPES.lunch.filter(filterByDislikes))
-        const dinner = pickRandom(CANTEEN_RECIPES.dinner.filter(filterByDislikes))
-        const snack = pickRandom(CANTEEN_RECIPES.snack.filter(filterByDislikes))
+        const breakfast = smartPick(CANTEEN_RECIPES.breakfast.filter(filterByDislikes))
+        const lunch = smartPick(CANTEEN_RECIPES.lunch.filter(filterByDislikes))
+        const dinner = smartPick(CANTEEN_RECIPES.dinner.filter(filterByDislikes))
+        const snack = smartPick(CANTEEN_RECIPES.snack.filter(filterByDislikes))
 
         const buildMealDetail = (recipe) => {
           const items = recipe.items.map(foodId => {
