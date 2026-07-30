@@ -35,6 +35,7 @@ export default function Profile() {
     getBMI,
     resetAll,
     addBodyRecord,
+    clearAllRecords,
   } = useStore()
 
   const [editingField, setEditingField] = useState(null)
@@ -333,13 +334,23 @@ export default function Profile() {
             <button className="w-full text-left text-sm text-gray-600 py-2">📤 数据导出</button>
             <button
               onClick={() => {
-                if (confirm('确定要重置所有数据吗？此操作不可恢复！')) {
+                if (confirm('确定要清空所有饮食和体重记录吗？用户档案（身高、性别等）会保留。')) {
+                  clearAllRecords()
+                }
+              }}
+              className="w-full text-left text-sm text-orange-500 py-2"
+            >
+              🧹 清空所有记录（保留个人档案）
+            </button>
+            <button
+              onClick={() => {
+                if (confirm('确定要重置为初始示例数据吗？所有个人数据将被覆盖！')) {
                   resetAll()
                 }
               }}
               className="w-full text-left text-sm text-red-500 py-2"
             >
-              🗑️ 清空所有记录
+              🔄 重置为示例数据（恢复初始状态）
             </button>
             <p className="text-xs text-gray-400 pt-2">
               版本 v0.1.0 · 仅供参考，不替代专业医疗建议
@@ -546,9 +557,9 @@ export default function Profile() {
       {/* 性别选择弹窗 */}
       {showGenderPicker && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-end" onClick={() => setShowGenderPicker(false)}>
-          <div className="w-full max-w-md mx-auto bg-white rounded-t-3xl p-5" onClick={(e) => e.stopPropagation()}>
+          <div className="w-full max-w-md mx-auto bg-white rounded-t-3xl p-5 max-h-[70vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-lg font-bold mb-4">选择性别</h3>
-            <div className="space-y-2">
+            <div className="space-y-2 pb-2">
               {[
                 { key: 'male', label: '男', icon: '👨' },
                 { key: 'female', label: '女', icon: '👩' },
