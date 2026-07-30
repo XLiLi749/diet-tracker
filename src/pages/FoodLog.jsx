@@ -47,14 +47,73 @@ export default function FoodLog() {
     return groups
   }, [logs])
 
+  // 智能估算食物分量（基于食物名称和类别）
+  const estimateQuantity = (food) => {
+    const name = food.name || ''
+    const category = food.category || ''
+    // 先按名称匹配典型分量
+    const namePatterns = [
+      { p: /米饭|白饭|大米/, qty: 150 },
+      { p: /面条|拉面|刀削|炸酱面|小面|担担|臊子面|米线|米粉|河粉/, qty: 200 },
+      { p: /炒饭|炒面/, qty: 200 },
+      { p: /包子|肉包|菜包|馒头/, qty: 100 },
+      { p: /饺子|馄饨|云吞/, qty: 150 },
+      { p: /小笼包|汤包/, qty: 120 },
+      { p: /粥/, qty: 300, unit: 'ml' },
+      { p: /豆浆|牛奶|酸奶/, qty: 250, unit: 'ml' },
+      { p: /咖啡|奶茶|果汁|可乐|汽水|茶/, qty: 350, unit: 'ml' },
+      { p: /鸡蛋|水煮蛋|煎蛋|蒸蛋/, qty: 50 },
+      { p: /鸡腿|鸡翅|鸡胸|鸡排/, qty: 120 },
+      { p: /红烧肉|东坡肉|回锅肉|小炒肉|锅包肉|扣肉|肥牛|肥羊|猪排|牛排/, qty: 120 },
+      { p: /宫保鸡丁|鱼香肉丝|京酱肉丝|青椒肉丝/, qty: 120 },
+      { p: /白切鸡|盐焗鸡|烧鸡|烤鸭/, qty: 150 },
+      { p: /鱼|虾|蟹|海鲜/, qty: 120 },
+      { p: /豆腐|麻婆豆腐|家常豆腐|豆干/, qty: 150 },
+      { p: /西兰花|青菜|白菜|菠菜|生菜|油麦菜|空心菜|韭菜|芹菜|黄瓜|番茄|西红柿|土豆丝|藕片|地三鲜/, qty: 100 },
+      { p: /麻辣烫|火锅|冒菜/, qty: 250 },
+      { p: /面包|吐司|三明治|汉堡/, qty: 100 },
+      { p: /披萨|意面|肉酱面/, qty: 200 },
+      { p: /寿司|盖饭|牛丼|石锅拌饭|咖喱饭|海南鸡饭/, qty: 250 },
+      { p: /紫菜包饭|饭团|手卷/, qty: 150 },
+      { p: /苹果|香蕉|橙子|橘子|梨|桃|芒果|猕猴桃|火龙果|西瓜|葡萄|草莓|蓝莓|西柚/, qty: 150 },
+      { p: /关东煮|章鱼小丸子|章鱼烧/, qty: 100 },
+      { p: /蛋挞|蛋糕|冰淇淋|巧克力/, qty: 60 },
+      { p: /红薯|玉米|紫薯/, qty: 150 },
+      { p: /麻辣烫|螺蛳粉|酸辣粉/, qty: 300 },
+      { p: /沙拉/, qty: 150 },
+    ]
+    for (const { p, qty, unit } of namePatterns) {
+      if (p.test(name)) {
+        return { qty, unit: unit || 'g' }
+      }
+    }
+    // 按类别匹配
+    if (category.includes('汤') || category.includes('粥') || category.includes('饮料')) {
+      return { qty: 250, unit: 'ml' }
+    }
+    if (category.includes('主食')) {
+      return { qty: 150, unit: 'g' }
+    }
+    if (category.includes('肉') || category.includes('水产')) {
+      return { qty: 100, unit: 'g' }
+    }
+    if (category.includes('蔬菜')) {
+      return { qty: 100, unit: 'g' }
+    }
+    if (category.includes('水果')) {
+      return { qty: 150, unit: 'g' }
+    }
+    return { qty: 100, unit: 'g' }
+  }
+
   const handleSelectFood = (food) => {
-    const qty = 100
+    const { qty, unit } = estimateQuantity(food)
     const factor = qty / 100
     const newItem = {
       foodId: food.id,
       name: food.name,
       quantity: qty,
-      unit: 'g',
+      unit,
       calories: Math.round(food.calories * factor),
       protein: Math.round(food.protein * factor * 10) / 10,
       carbs: Math.round(food.carbs * factor * 10) / 10,
@@ -131,15 +190,15 @@ export default function FoodLog() {
         throw new Error('未能识别出食物，请换个角度再拍一张')
       }
 
-      // 转换为食物记录格式
+      // 转换为食物记录格式（智能估算分量）
       const picks = results.map((item) => {
-        const qty = 100
+        const { qty, unit } = estimateQuantity(item)
         const factor = qty / 100
         return {
           foodId: `ai_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
           name: item.name,
           quantity: qty,
-          unit: 'g',
+          unit,
           calories: Math.round(item.calories * factor),
           protein: Math.round(item.protein * factor * 10) / 10,
           carbs: Math.round(item.carbs * factor * 10) / 10,
