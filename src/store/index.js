@@ -281,7 +281,7 @@ const useStore = create(
         return stats
       },
 
-      // 重置数据（用于调试）
+      // 重置数据（用于调试，恢复 mock 数据）
       resetAll: () => {
         set({
           profile: DEFAULT_PROFILE,
@@ -290,6 +290,16 @@ const useStore = create(
           bodyRecords: generateMockBodyRecords(),
           todayRecommendations: null,
           tastePreferences: [],
+        })
+      },
+
+      // 清空所有记录（保留用户档案）
+      clearAllRecords: () => {
+        const { profile } = get()
+        set({
+          foodLogs: {},
+          bodyRecords: [],
+          todayRecommendations: null,
         })
       },
     }),
