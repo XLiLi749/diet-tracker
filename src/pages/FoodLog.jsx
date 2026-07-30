@@ -329,8 +329,19 @@ export default function FoodLog() {
             {/* 已选食物 */}
             {selectedItems.length > 0 && (
               <div className="px-5 py-3 bg-primary-50">
-                <p className="text-xs font-medium text-primary-700 mb-2">已选 {selectedItems.length} 项</p>
-                <div className="space-y-2">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs font-medium text-primary-700">
+                    ✅ 已选 {selectedItems.length} 项 · 合计 {selectedItems.reduce((s, i) => s + i.calories, 0)} kcal
+                  </p>
+                  <button
+                    onClick={handleConfirmAdd}
+                    className="bg-primary-500 text-white text-xs px-3 py-1.5 rounded-full font-semibold active:bg-primary-600"
+                  >
+                    确认添加 →
+                  </button>
+                </div>
+                <p className="text-[10px] text-primary-500 mb-2">💡 可修改克数，或点右边 × 删除不需要的</p>
+                <div className="space-y-2 max-h-[30vh] overflow-y-auto">
                   {selectedItems.map((item, idx) => (
                     <div key={idx} className="flex items-center gap-2 bg-white rounded-lg p-2">
                       <span className="text-sm flex-1">{item.name}</span>
