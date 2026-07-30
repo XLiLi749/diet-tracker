@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import useStore from '../store'
-import { calcBMI } from '../data/mock'
+import { calcBMI, calcIdealWeightRange, calcSuggestedTargetWeight } from '../data/mock'
 
 const goalOptions = [
   { key: 'fat_loss', label: '减脂', icon: '🏃', desc: '控制热量，健康减重' },
@@ -580,6 +580,30 @@ export default function Profile() {
                 onChange={(e) => updateProfile({ dietGoal: { ...profile.dietGoal, targetWeight: parseFloat(e.target.value) } })}
                 className="w-full bg-gray-100 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary-300"
               />
+              {(() => {
+                const range = calcIdealWeightRange(profile.height)
+                const suggested = calcSuggestedTargetWeight(profile)
+                return (
+                  <div className="mt-3 space-y-1 text-xs">
+                    <p className="text-gray-500">
+                      健康范围：<span className="text-gray-700">{range.minHealthy} ~ {range.maxHealthy} kg</span>
+                      （BMI 18.5 ~ 23.9）
+                    </p>
+                    <p className="text-gray-500">
+                      理想体重（BMI 22）：<span className="text-primary-600 font-medium">{range.ideal} kg</span>
+                    </p>
+                    <p className="text-blue-600">
+                      💡 根据当前目标，智能推荐：<span className="font-bold">{suggested} kg</span>
+                      <button
+                        onClick={() => updateProfile({ dietGoal: { ...profile.dietGoal, targetWeight: suggested } })}
+                        className="ml-2 underline"
+                      >
+                        使用推荐值
+                      </button>
+                    </p>
+                  </div>
+                )
+              })()}
             </div>
           </div>
         </div>
