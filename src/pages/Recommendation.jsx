@@ -21,10 +21,22 @@ const tasteTags = [
 ]
 
 const specialScenes = [
-  { key: 'party', label: '今晚聚餐', icon: '🎉', tip: '适当放宽，选清蒸/凉拌，少喝饮料' },
-  { key: 'busy', label: '太忙没时间', icon: '⏰', tip: '推荐便携方案：面包+牛奶+鸡蛋' },
+  { key: 'normal', label: '日常普通', icon: '🍽️', tip: '正常均衡饮食即可' },
+  { key: 'party', label: '聚餐/应酬', icon: '🎉', tip: '适当放宽，选清蒸/凉拌，少喝饮料' },
+  { key: 'busy', label: '工作/学习太忙', icon: '⏰', tip: '推荐便携方案：面包+牛奶+鸡蛋' },
   { key: 'poor', label: '预算紧张', icon: '💸', tip: '高性价比：馒头+粥+免费汤' },
-  { key: 'exam', label: '考试周', icon: '📚', tip: '增加补脑食物：鱼类、坚果、鸡蛋' },
+  { key: 'exam', label: '考试/加班冲刺', icon: '📚', tip: '增加补脑食物：鱼类、坚果、鸡蛋' },
+  { key: 'gym', label: '健身/增肌日', icon: '🏋️', tip: '高蛋白饮食：鸡胸肉、鸡蛋、牛奶、豆制品' },
+  { key: 'sick', label: '生病/不舒服', icon: '🤒', tip: '清淡易消化：粥、蒸蛋、清汤面' },
+  { key: 'travel', label: '出差/旅行', icon: '✈️', tip: '尽量规律，少吃油炸，多喝水' },
+  { key: 'date', label: '约会/请客', icon: '💝', tip: '选择环境好、菜品精致的餐厅，控制分量' },
+  { key: 'festival', label: '节日/假期', icon: '🎊', tip: '避免暴饮暴食，多吃蔬菜，适量饮酒' },
+  { key: 'period', label: '女生经期', icon: '🌺', tip: '补铁暖身：红枣、红糖、红肉、温热食物' },
+  { key: 'pregnancy', label: '孕期/备孕', icon: '🤰', tip: '营养均衡，补充叶酸，避免生冷刺激' },
+  { key: 'breakfast_skip', label: '经常不吃早餐', icon: '🌅', tip: '简易早餐：牛奶+鸡蛋+面包，5分钟搞定' },
+  { key: 'night_owl', label: '熬夜/宵夜', icon: '🦉', tip: '宵夜选清淡：粥、酸奶、水果，避免烧烤油炸' },
+  { key: 'vegetarian', label: '素食日', icon: '🥗', tip: '注意补充蛋白质：豆类、坚果、蛋奶' },
+  { key: 'detox', label: '清肠/轻断食', icon: '🍵', tip: '减少主食，多吃蔬菜、水果、汤类' },
 ]
 
 export default function Recommendation() {
@@ -38,7 +50,8 @@ export default function Recommendation() {
   } = useStore()
 
   const [activeTags, setActiveTags] = useState(tastePreferences)
-  const [activeScene, setActiveScene] = useState(null)
+  const [activeScene, setActiveScene] = useState('normal')
+  const [showSceneDropdown, setShowSceneDropdown] = useState(false)
   const [customInput, setCustomInput] = useState('')
   const [showToast, setShowToast] = useState(false)
 
@@ -59,8 +72,9 @@ export default function Recommendation() {
     setTastePreferences(newTags)
   }
 
-  const handleSceneClick = (scene) => {
-    setActiveScene(activeScene === scene.key ? null : scene.key)
+  const handleSceneSelect = (sceneKey) => {
+    setActiveScene(sceneKey)
+    setShowSceneDropdown(false)
   }
 
   const handleApplyTaste = () => {
@@ -76,6 +90,8 @@ export default function Recommendation() {
     { label: '碳水', current: summary.carbs, target: targets.carbsTarget, pct: summary.carbsPct, good: 60 },
     { label: '脂肪', current: summary.fat, target: targets.fatTarget, pct: summary.fatPct, good: 50 },
   ]
+
+  const currentScene = specialScenes.find(s => s.key === activeScene) || specialScenes[0]
 
   if (!todayRecommendations) {
     return (
@@ -138,26 +154,43 @@ export default function Recommendation() {
       <div className="px-4 mt-4">
         <div className="card">
           <h3 className="text-sm font-semibold text-gray-700 mb-3">🎯 特殊场景</h3>
-          <div className="grid grid-cols-2 gap-2">
-            {specialScenes.map((scene) => (
-              <button
-                key={scene.key}
-                onClick={() => handleSceneClick(scene)}
-                className={`p-3 rounded-xl text-left transition-colors ${
-                  activeScene === scene.key
-                    ? 'bg-accent-100 border-2 border-accent-400'
-                    : 'bg-gray-50 border-2 border-transparent'
-                }`}
-              >
-                <div className="text-xl mb-1">{scene.icon}</div>
-                <p className="text-sm font-medium text-gray-800">{scene.label}</p>
-              </button>
-            ))}
+          <div className="relative">
+            <button
+              onClick={() => setShowSceneDropdown(!showSceneDropdown)}
+              className="w-full flex items-center justify-between bg-gray-50 hover:bg-gray-100 rounded-xl px-4 py-3 transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-xl">{currentScene.icon}</span>
+                <span className="text-sm font-medium text-gray-800">{currentScene.label}</span>
+              </div>
+              <span className={`text-gray-400 transition-transform ${showSceneDropdown ? 'rotate-180' : ''}`}>▼</span>
+            </button>
+            {showSceneDropdown && (
+              <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-lg z-20 max-h-[50vh] overflow-y-auto">
+                {specialScenes.map((scene) => (
+                  <button
+                    key={scene.key}
+                    onClick={() => handleSceneSelect(scene.key)}
+                    className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${
+                      activeScene === scene.key
+                        ? 'bg-primary-50 text-primary-700'
+                        : 'hover:bg-gray-50'
+                    }`}
+                  >
+                    <span className="text-lg">{scene.icon}</span>
+                    <span className="text-sm font-medium">{scene.label}</span>
+                    {activeScene === scene.key && (
+                      <span className="ml-auto text-primary-500">✓</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
-          {activeScene && (
+          {activeScene && activeScene !== 'normal' && (
             <div className="mt-3 p-3 bg-amber-50 rounded-xl">
               <p className="text-sm text-amber-700">
-                💡 {specialScenes.find(s => s.key === activeScene)?.tip}
+                💡 {currentScene.tip}
               </p>
             </div>
           )}
