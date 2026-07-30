@@ -40,6 +40,7 @@ export default function Recommendation() {
   const [activeTags, setActiveTags] = useState(tastePreferences)
   const [activeScene, setActiveScene] = useState(null)
   const [customInput, setCustomInput] = useState('')
+  const [showToast, setShowToast] = useState(false)
 
   const summary = getTodaySummary()
   const remainingCals = Math.max(0, targets.calorieTarget - summary.calories)
@@ -65,7 +66,8 @@ export default function Recommendation() {
   const handleApplyTaste = () => {
     // 模拟：重新生成推荐
     generateTodayRecommendations()
-    alert('已根据你的口味偏好调整推荐方案！')
+    setShowToast(true)
+    setTimeout(() => setShowToast(false), 2000)
   }
 
   // 营养平衡检查
@@ -248,6 +250,15 @@ export default function Recommendation() {
           </div>
         </div>
       </div>
+
+      {/* 自定义 Toast 提示 */}
+      {showToast && (
+        <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none">
+          <div className="bg-gray-800 bg-opacity-90 text-white px-6 py-3 rounded-xl text-sm font-medium shadow-lg">
+            ✨ 已根据你的口味偏好调整推荐方案！
+          </div>
+        </div>
+      )}
     </div>
   )
 }
