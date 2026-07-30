@@ -30,6 +30,8 @@ export default function FoodLog() {
   const [selectedItems, setSelectedItems] = useState([]) // {foodId, name, quantity, ...nutrition}
   const [showAiPanel, setShowAiPanel] = useState(false)
   const [capturedPhoto, setCapturedPhoto] = useState(null)
+  const [aiRecognizing, setAiRecognizing] = useState(false)
+  const [aiError, setAiError] = useState(null)
 
   const logs = getLogsByDate(selectedDate)
   const summary = getTodaySummary()
@@ -100,30 +102,63 @@ export default function FoodLog() {
     reader.readAsDataURL(file)
   }
 
-  // 模拟AI识别
-  const handleSimulateAi = () => {
-    // 随机选几个食物作为识别结果
-    const sample = FOOD_DATABASE.slice(0, 8)
-    const picks = []
-    for (let i = 0; i < 3; i++) {
-      const f = sample[Math.floor(Math.random() * sample.length)]
-      const qty = 100 + Math.floor(Math.random() * 50)
-      const factor = qty / 100
-      picks.push({
-        foodId: f.id,
-        name: f.name,
-        quantity: qty,
-        unit: 'g',
-        calories: Math.round(f.calories * factor),
-        protein: Math.round(f.protein * factor * 10) / 10,
-        carbs: Math.round(f.carbs * factor * 10) / 10,
-        fat: Math.round(f.fat * factor * 10) / 10,
+  // 真实AI识别（调用百度AI API）
+  const handleRecognize = async () => {
+    if (!capturedPhoto) return
+
+    setAiRecognizing(true)
+    setAiError(null)
+
+    try {
+      // 调用后端代理接口
+      const response = await fetch('/api/recognize', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ image: capturedPhoto }),
       })
+
+      const data = await response.json()
+
+      if (data.error) {
+        throw new Error(data.error)
+      }
+
+      // 处理识别结果
+      const results = data.results || []
+      if (results.length === 0) {
+        throw new Error('未能识别出食物，请换个角度再拍一张')
+      }
+
+      // 转换为食物记录格式
+      const picks = results.map((item) => {
+        const qty = 100
+        const factor = qty / 100
+        return {
+          foodId: `ai_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+          name: item.name,
+          quantity: qty,
+          unit: 'g',
+          calories: Math.round(item.calories * factor),
+          protein: Math.round(item.protein * factor * 10) / 10,
+          carbs: Math.round(item.carbs * factor * 10) / 10,
+          fat: Math.round(item.fat * factor * 10) / 10,
+          probability: item.probability || 0,
+        }
+      })
+
+      setSelectedItems(picks)
+      setCapturedPhoto(null)
+      setShowAiPanel(false)
+      setShowAddPanel(true)
+
+    } catch (error) {
+      console.error('AI识别失败:', error)
+      setAiError(error.message || '识别失败，请稍后重试')
+    } finally {
+      setAiRecognizing(false)
     }
-    setSelectedItems(picks)
-    setCapturedPhoto(null)
-    setShowAiPanel(false)
-    setShowAddPanel(true)
   }
 
   // 日期导航
@@ -386,16 +421,40 @@ export default function FoodLog() {
                   <p className="text-sm text-gray-500 mb-4">
                     点击下方按钮，AI将开始识别食物种类和营养成分
                   </p>
+
+                  {/* 错误提示 */}
+                  {aiError && (
+                    <div className="bg-red-50 border border-red-200 text-red-600 text-sm rounded-xl p-3 mb-4">
+                      ⚠️ {aiError}
+                    </div>
+                  )}
+
                   <div className="space-y-3">
                     <button
-                      onClick={handleSimulateAi}
-                      className="w-full bg-primary-500 text-white py-3.5 rounded-xl font-semibold active:bg-primary-600"
+                      onClick={handleRecognize}
+                      disabled={aiRecognizing}
+                      className={`w-full py-3.5 rounded-xl font-semibold transition-colors ${
+                        aiRecognizing
+                          ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                          : 'bg-primary-500 text-white active:bg-primary-600'
+                      }`}
                     >
-                      🔍 开始AI识别
+                      {aiRecognizing ? (
+                        <span className="flex items-center justify-center gap-2">
+                          <span className="animate-spin">⏳</span> AI识别中...
+                        </span>
+                      ) : (
+                        '🔍 开始AI识别'
+                      )}
                     </button>
                     <button
-                      onClick={() => setCapturedPhoto(null)}
-                      className="w-full bg-gray-100 text-gray-700 py-3.5 rounded-xl font-semibold active:bg-gray-200"
+                      onClick={() => { setCapturedPhoto(null); setAiError(null) }}
+                      disabled={aiRecognizing}
+                      className={`w-full py-3.5 rounded-xl font-semibold transition-colors ${
+                        aiRecognizing
+                          ? 'bg-gray-50 text-gray-300 cursor-not-allowed'
+                          : 'bg-gray-100 text-gray-700 active:bg-gray-200'
+                      }`}
                     >
                       📸 重新拍照
                     </button>
