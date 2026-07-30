@@ -231,7 +231,6 @@ const useStore = create(
 
           return {
             name: recipe.name,
-            canteen: recipe.canteen,
             items,
             totalNutrition: {
               calories: Math.round(totalCals),
