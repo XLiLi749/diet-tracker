@@ -158,7 +158,6 @@ export default function Dashboard() {
                       <span className="text-xs text-gray-400 ml-auto">{rec.totalNutrition.calories} kcal</span>
                     </div>
                     <p className="text-sm text-gray-600">{rec.name}</p>
-                    <p className="text-xs text-gray-400 mt-1">📍 {rec.canteen}</p>
                   </div>
                 )
               })}
