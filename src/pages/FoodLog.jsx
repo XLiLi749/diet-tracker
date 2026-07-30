@@ -29,6 +29,7 @@ export default function FoodLog() {
   const [searchKeyword, setSearchKeyword] = useState('')
   const [selectedItems, setSelectedItems] = useState([]) // {foodId, name, quantity, ...nutrition}
   const [showAiPanel, setShowAiPanel] = useState(false)
+  const [capturedPhoto, setCapturedPhoto] = useState(null)
 
   const logs = getLogsByDate(selectedDate)
   const summary = getTodaySummary()
@@ -88,6 +89,17 @@ export default function FoodLog() {
     setSearchKeyword('')
   }
 
+  // 处理拍照/相册选择
+  const handlePhotoCapture = (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = (ev) => {
+      setCapturedPhoto(ev.target?.result)
+    }
+    reader.readAsDataURL(file)
+  }
+
   // 模拟AI识别
   const handleSimulateAi = () => {
     // 随机选几个食物作为识别结果
@@ -109,6 +121,7 @@ export default function FoodLog() {
       })
     }
     setSelectedItems(picks)
+    setCapturedPhoto(null)
     setShowAiPanel(false)
     setShowAddPanel(true)
   }
@@ -357,40 +370,76 @@ export default function FoodLog() {
 
       {/* AI识别面板 */}
       {showAiPanel && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center" onClick={() => setShowAiPanel(false)}>
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center" onClick={() => { setShowAiPanel(false); setCapturedPhoto(null) }}>
           <div
-            className="w-full max-w-md mx-auto bg-white rounded-3xl mx-4 overflow-hidden"
+            className="w-full max-w-md mx-auto bg-white rounded-3xl mx-4 overflow-hidden max-h-[85vh] flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="p-6 text-center">
-              <div className="text-5xl mb-4">📷</div>
-              <h2 className="text-lg font-bold text-gray-800 mb-2">拍照识别</h2>
-              <p className="text-sm text-gray-500 mb-6">
-                对准食物拍照，AI将自动识别食物种类并估算营养成分
-              </p>
-              <div className="space-y-3">
-                <button
-                  onClick={handleSimulateAi}
-                  className="w-full bg-primary-500 text-white py-3.5 rounded-xl font-semibold active:bg-primary-600"
-                >
-                  📸 拍照识别（演示）
-                </button>
-                <button
-                  onClick={handleSimulateAi}
-                  className="w-full bg-gray-100 text-gray-700 py-3.5 rounded-xl font-semibold active:bg-gray-200"
-                >
-                  🖼️ 从相册选择（演示）
-                </button>
-                <button
-                  onClick={() => setShowAiPanel(false)}
-                  className="w-full text-gray-400 py-2 text-sm"
-                >
-                  取消
-                </button>
-              </div>
-              <p className="text-xs text-gray-400 mt-4">
-                * 演示模式：AI识别功能将随机生成识别结果
-              </p>
+            <div className="p-6 text-center overflow-y-auto">
+              {capturedPhoto ? (
+                <>
+                  <div className="text-3xl mb-3">✅</div>
+                  <h2 className="text-lg font-bold text-gray-800 mb-3">照片已拍摄</h2>
+                  <div className="bg-gray-100 rounded-2xl p-2 mb-4">
+                    <img src={capturedPhoto} alt="拍摄的食物" className="w-full h-48 object-cover rounded-xl" />
+                  </div>
+                  <p className="text-sm text-gray-500 mb-4">
+                    点击下方按钮，AI将开始识别食物种类和营养成分
+                  </p>
+                  <div className="space-y-3">
+                    <button
+                      onClick={handleSimulateAi}
+                      className="w-full bg-primary-500 text-white py-3.5 rounded-xl font-semibold active:bg-primary-600"
+                    >
+                      🔍 开始AI识别
+                    </button>
+                    <button
+                      onClick={() => setCapturedPhoto(null)}
+                      className="w-full bg-gray-100 text-gray-700 py-3.5 rounded-xl font-semibold active:bg-gray-200"
+                    >
+                      📸 重新拍照
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="text-5xl mb-4">📷</div>
+                  <h2 className="text-lg font-bold text-gray-800 mb-2">拍照识别</h2>
+                  <p className="text-sm text-gray-500 mb-6">
+                    对准食物拍照，AI将自动识别食物种类并估算营养成分
+                  </p>
+                  <div className="space-y-3">
+                    <label className="block w-full bg-primary-500 text-white py-3.5 rounded-xl font-semibold active:bg-primary-600 cursor-pointer">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        onChange={handlePhotoCapture}
+                        className="hidden"
+                      />
+                      📸 拍照识别
+                    </label>
+                    <label className="block w-full bg-gray-100 text-gray-700 py-3.5 rounded-xl font-semibold active:bg-gray-200 cursor-pointer">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handlePhotoCapture}
+                        className="hidden"
+                      />
+                      🖼️ 从相册选择
+                    </label>
+                    <button
+                      onClick={() => { setShowAiPanel(false); setCapturedPhoto(null) }}
+                      className="w-full text-gray-400 py-2 text-sm"
+                    >
+                      取消
+                    </button>
+                  </div>
+                  <p className="text-xs text-gray-400 mt-4">
+                    * AI识别为演示模式，将基于食物库智能匹配识别结果
+                  </p>
+                </>
+              )}
             </div>
           </div>
         </div>
