@@ -24,8 +24,27 @@ const exerciseOptions = [
   { key: 'daily', label: '几乎每天' },
 ]
 
+const identityOptions = [
+  { key: 'student', label: '学生', icon: '🎓' },
+  { key: 'office_worker', label: '办公室职员', icon: '💼' },
+  { key: 'teacher', label: '教师', icon: '👨‍🏫' },
+  { key: 'doctor', label: '医护人员', icon: '👨‍⚕️' },
+  { key: 'engineer', label: '工程师/程序员', icon: '👨‍💻' },
+  { key: 'designer', label: '设计师', icon: '🎨' },
+  { key: 'freelancer', label: '自由职业者', icon: '🌟' },
+  { key: 'business', label: '创业者/企业主', icon: '🚀' },
+  { key: 'athlete', label: '运动员/健身教练', icon: '🏋️' },
+  { key: 'retired', label: '退休人员', icon: '🌴' },
+  { key: 'homemaker', label: '家庭主妇/主夫', icon: '🏠' },
+  { key: 'other', label: '其他', icon: '👤' },
+]
+
 const allergyOptions = ['花生', '海鲜', '牛奶', '鸡蛋', '小麦', '大豆', '坚果']
 const dislikeOptions = ['香菜', '苦瓜', '芹菜', '韭菜', '胡萝卜', '洋葱', '大蒜']
+
+// 通用弹窗样式：屏幕正中央，避免被底部导航遮挡
+const modalOverlayClass = 'fixed inset-0 bg-black/50 z-[100] flex items-center justify-center'
+const modalContainerClass = 'w-full max-w-sm mx-4 bg-white rounded-3xl p-5 max-h-[80vh] overflow-y-auto'
 
 export default function Profile() {
   const {
@@ -38,8 +57,10 @@ export default function Profile() {
     clearAllRecords,
   } = useStore()
 
-  const [editingField, setEditingField] = useState(null)
+  const [editingField, setEditingField] = useState(null) // 行内编辑（仅昵称）
   const [editValue, setEditValue] = useState('')
+
+  // 各类型弹窗
   const [showGoalPicker, setShowGoalPicker] = useState(false)
   const [showSchedulePicker, setShowSchedulePicker] = useState(false)
   const [showExercisePicker, setShowExercisePicker] = useState(false)
@@ -47,7 +68,14 @@ export default function Profile() {
   const [showDislikePicker, setShowDislikePicker] = useState(false)
   const [showWeightInput, setShowWeightInput] = useState(false)
   const [showGenderPicker, setShowGenderPicker] = useState(false)
+  const [showIdentityPicker, setShowIdentityPicker] = useState(false)
+
+  // 数值型字段弹窗（身高、体重、年龄、目标体重）
+  const [showNumberPicker, setShowNumberPicker] = useState(false)
+  const [numberPickerConfig, setNumberPickerConfig] = useState({ field: '', label: '', unit: '', min: 0, max: 999, step: 1 })
+
   const [newWeight, setNewWeight] = useState('')
+  const [tempNumberValue, setTempNumberValue] = useState('')
 
   const bmi = getBMI()
   const bmiCategory = (() => {
@@ -65,21 +93,41 @@ export default function Profile() {
 
   const saveEdit = () => {
     if (editingField === 'nickname') {
-      updateProfile({ nickname: editValue })
-    } else if (editingField === 'height') {
-      updateProfile({ height: parseFloat(editValue) || profile.height })
-    } else if (editingField === 'weight') {
-      const w = parseFloat(editValue)
-      if (w) {
-        updateProfile({ weight: w })
-        addBodyRecord(w)
-      }
-    } else if (editingField === 'age') {
-      updateProfile({ age: parseInt(editValue) || profile.age })
-    } else if (editingField === 'targetWeight') {
-      updateProfile({ dietGoal: { ...profile.dietGoal, targetWeight: parseFloat(editValue) } })
+      updateProfile({ nickname: editValue || profile.nickname })
     }
     setEditingField(null)
+  }
+
+  // 打开数值编辑弹窗
+  const openNumberPicker = (field, value) => {
+    const configs = {
+      height: { label: '身高', unit: 'cm', min: 100, max: 250, step: 1 },
+      weight: { label: '体重', unit: 'kg', min: 20, max: 300, step: 0.1 },
+      age: { label: '年龄', unit: '岁', min: 10, max: 100, step: 1 },
+      targetWeight: { label: '目标体重', unit: 'kg', min: 30, max: 200, step: 0.1 },
+    }
+    const cfg = configs[field] || { label: field, unit: '', min: 0, max: 999, step: 1 }
+    setNumberPickerConfig({ field, ...cfg })
+    setTempNumberValue(String(value))
+    setShowNumberPicker(true)
+  }
+
+  const saveNumberPicker = () => {
+    const { field } = numberPickerConfig
+    const val = parseFloat(tempNumberValue)
+    if (isNaN(val)) {
+      setShowNumberPicker(false)
+      return
+    }
+    if (field === 'targetWeight') {
+      updateProfile({ dietGoal: { ...profile.dietGoal, targetWeight: val } })
+    } else if (field === 'weight') {
+      updateProfile({ weight: val })
+      addBodyRecord(val)
+    } else {
+      updateProfile({ [field]: field === 'age' ? parseInt(val) || profile.age : val })
+    }
+    setShowNumberPicker(false)
   }
 
   const toggleAllergy = (item) => {
@@ -110,6 +158,12 @@ export default function Profile() {
   const currentGoal = goalOptions.find(g => g.key === profile.dietGoal.type) || goalOptions[2]
   const currentSchedule = scheduleOptions.find(s => s.key === profile.lifestyle.sleepSchedule) || scheduleOptions[1]
   const currentExercise = exerciseOptions.find(e => e.key === profile.lifestyle.exerciseFrequency) || exerciseOptions[2]
+  const currentIdentity = identityOptions.find(i => i.key === profile.identity) || identityOptions[1]
+
+  const displayProfession = profile.profession || currentIdentity.label
+
+  const genderDisplay = profile.gender === 'female' ? '女' : '男'
+  const genderIcon = profile.gender === 'female' ? '👩' : '👨'
 
   return (
     <div className="pb-4">
@@ -117,8 +171,11 @@ export default function Profile() {
       <div className="bg-gradient-to-br from-purple-500 to-primary-400 text-white px-5 pt-12 pb-8 rounded-b-3xl">
         <h1 className="text-xl font-bold">👤 我的</h1>
         <div className="flex items-center gap-4 mt-5">
-          <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center text-3xl">
-            🧑‍🎓
+          <div
+            className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center text-3xl cursor-pointer"
+            onClick={() => setShowGenderPicker(true)}
+          >
+            {genderIcon}
           </div>
           <div className="flex-1">
             {editingField === 'nickname' ? (
@@ -141,7 +198,12 @@ export default function Profile() {
                 {profile.nickname} ✏️
               </h2>
             )}
-            <p className="text-sm opacity-80 mt-1">大学生 · 饮食管理</p>
+            <p
+              className="text-sm opacity-80 mt-1 cursor-pointer"
+              onClick={() => setShowIdentityPicker(true)}
+            >
+              {currentIdentity.icon} {displayProfession} · 饮食管理 ✏️
+            </p>
           </div>
         </div>
       </div>
@@ -161,39 +223,26 @@ export default function Profile() {
 
           <div className="grid grid-cols-2 gap-3 mb-4">
             {[
-              { label: '身高', value: profile.height, unit: 'cm', field: 'height', type: 'number' },
-              { label: '体重', value: profile.weight, unit: 'kg', field: 'weight', type: 'number' },
-              { label: '年龄', value: profile.age, unit: '岁', field: 'age', type: 'number' },
-              { label: '性别', value: profile.gender === 'male' ? '男' : '女', unit: '', field: 'gender', type: 'gender' },
+              { label: '身高', value: profile.height, unit: 'cm', field: 'height' },
+              { label: '体重', value: profile.weight, unit: 'kg', field: 'weight' },
+              { label: '年龄', value: profile.age, unit: '岁', field: 'age' },
+              { label: '性别', value: genderDisplay, unit: '', field: 'gender', isGender: true },
             ].map((item) => (
               <div
                 key={item.field}
                 onClick={() => {
-                  if (item.type === 'gender') {
+                  if (item.isGender) {
                     setShowGenderPicker(true)
-                  } else if (item.type !== 'select') {
-                    startEdit(item.field, item.value)
+                  } else {
+                    openNumberPicker(item.field, item.value)
                   }
                 }}
-                className="bg-gray-50 rounded-xl p-3 cursor-pointer"
+                className="bg-gray-50 rounded-xl p-3 cursor-pointer active:bg-gray-100"
               >
                 <p className="text-xs text-gray-400">{item.label}</p>
-                {editingField === item.field ? (
-                  <div className="flex items-center gap-1 mt-1">
-                    <input
-                      type={item.type}
-                      value={editValue}
-                      onChange={(e) => setEditValue(e.target.value)}
-                      className="w-20 bg-white rounded px-2 py-0.5 text-sm outline-none"
-                      autoFocus
-                    />
-                    <button onClick={saveEdit} className="text-primary-500 text-sm">✓</button>
-                  </div>
-                ) : (
-                  <p className="text-lg font-bold text-gray-800 mt-1">
-                    {item.value}{item.unit}
-                  </p>
-                )}
+                <p className="text-lg font-bold text-gray-800 mt-1">
+                  {item.value}{item.unit}
+                </p>
               </div>
             ))}
           </div>
@@ -359,10 +408,50 @@ export default function Profile() {
         </div>
       </div>
 
+      {/* ========== 弹窗区域 ========== */}
+
+      {/* 数值编辑弹窗（身高/体重/年龄/目标体重） */}
+      {showNumberPicker && (
+        <div className={modalOverlayClass} onClick={() => setShowNumberPicker(false)}>
+          <div className={modalContainerClass} onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-bold mb-4">修改{numberPickerConfig.label}</h3>
+            <div className="relative">
+              <input
+                type="number"
+                step={numberPickerConfig.step}
+                min={numberPickerConfig.min}
+                max={numberPickerConfig.max}
+                value={tempNumberValue}
+                onChange={(e) => setTempNumberValue(e.target.value)}
+                className="w-full bg-gray-100 rounded-xl px-4 py-4 text-center text-2xl font-bold outline-none focus:ring-2 focus:ring-primary-300"
+                autoFocus
+              />
+              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-lg">
+                {numberPickerConfig.unit}
+              </span>
+            </div>
+            <div className="flex gap-3 mt-5">
+              <button
+                onClick={() => setShowNumberPicker(false)}
+                className="flex-1 bg-gray-100 text-gray-700 py-3 rounded-xl font-semibold"
+              >
+                取消
+              </button>
+              <button
+                onClick={saveNumberPicker}
+                className="flex-1 bg-primary-500 text-white py-3 rounded-xl font-semibold"
+              >
+                确定
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 目标选择弹窗 */}
       {showGoalPicker && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-end" onClick={() => setShowGoalPicker(false)}>
-          <div className="w-full max-w-md mx-auto bg-white rounded-t-3xl p-5" onClick={(e) => e.stopPropagation()}>
+        <div className={modalOverlayClass} onClick={() => setShowGoalPicker(false)}>
+          <div className={modalContainerClass} onClick={(e) => e.stopPropagation()}>
             <h3 className="text-lg font-bold mb-4">选择饮食目标</h3>
             <div className="space-y-2">
               {goalOptions.map((goal) => (
@@ -390,6 +479,7 @@ export default function Profile() {
               <p className="text-sm text-gray-600 mb-2">目标体重 (kg)</p>
               <input
                 type="number"
+                step="0.1"
                 value={profile.dietGoal.targetWeight}
                 onChange={(e) => updateProfile({ dietGoal: { ...profile.dietGoal, targetWeight: parseFloat(e.target.value) } })}
                 className="w-full bg-gray-100 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary-300"
@@ -401,8 +491,8 @@ export default function Profile() {
 
       {/* 作息选择 */}
       {showSchedulePicker && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-end" onClick={() => setShowSchedulePicker(false)}>
-          <div className="w-full max-w-md mx-auto bg-white rounded-t-3xl p-5" onClick={(e) => e.stopPropagation()}>
+        <div className={modalOverlayClass} onClick={() => setShowSchedulePicker(false)}>
+          <div className={modalContainerClass} onClick={(e) => e.stopPropagation()}>
             <h3 className="text-lg font-bold mb-4">选择作息类型</h3>
             <div className="space-y-2">
               {scheduleOptions.map((opt) => (
@@ -429,8 +519,8 @@ export default function Profile() {
 
       {/* 运动频率选择 */}
       {showExercisePicker && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-end" onClick={() => setShowExercisePicker(false)}>
-          <div className="w-full max-w-md mx-auto bg-white rounded-t-3xl p-5" onClick={(e) => e.stopPropagation()}>
+        <div className={modalOverlayClass} onClick={() => setShowExercisePicker(false)}>
+          <div className={modalContainerClass} onClick={(e) => e.stopPropagation()}>
             <h3 className="text-lg font-bold mb-4">选择运动频率</h3>
             <div className="space-y-2">
               {exerciseOptions.map((opt) => (
@@ -454,10 +544,39 @@ export default function Profile() {
         </div>
       )}
 
+      {/* 身份/职业选择 */}
+      {showIdentityPicker && (
+        <div className={modalOverlayClass} onClick={() => setShowIdentityPicker(false)}>
+          <div className={modalContainerClass} onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-bold mb-4">选择您的身份</h3>
+            <div className="space-y-2 max-h-[40vh] overflow-y-auto">
+              {identityOptions.map((opt) => (
+                <button
+                  key={opt.key}
+                  onClick={() => {
+                    updateProfile({ identity: opt.key, profession: opt.label })
+                    setShowIdentityPicker(false)
+                  }}
+                  className={`w-full flex items-center gap-3 p-3 rounded-xl text-left transition-colors ${
+                    profile.identity === opt.key
+                      ? 'bg-primary-50 border-2 border-primary-400'
+                      : 'bg-gray-50 border-2 border-transparent'
+                  }`}
+                >
+                  <span className="text-xl">{opt.icon}</span>
+                  <p className="font-semibold text-gray-800 text-sm">{opt.label}</p>
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-gray-400 mt-3 text-center">选择后可在个人信息中自定义职业名称</p>
+          </div>
+        </div>
+      )}
+
       {/* 过敏选择 */}
       {showAllergyPicker && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-end" onClick={() => setShowAllergyPicker(false)}>
-          <div className="w-full max-w-md mx-auto bg-white rounded-t-3xl p-5" onClick={(e) => e.stopPropagation()}>
+        <div className={modalOverlayClass} onClick={() => setShowAllergyPicker(false)}>
+          <div className={modalContainerClass} onClick={(e) => e.stopPropagation()}>
             <h3 className="text-lg font-bold mb-4">选择过敏食材</h3>
             <div className="flex flex-wrap gap-2">
               {allergyOptions.map((item) => {
@@ -489,8 +608,8 @@ export default function Profile() {
 
       {/* 忌口选择 */}
       {showDislikePicker && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-end" onClick={() => setShowDislikePicker(false)}>
-          <div className="w-full max-w-md mx-auto bg-white rounded-t-3xl p-5" onClick={(e) => e.stopPropagation()}>
+        <div className={modalOverlayClass} onClick={() => setShowDislikePicker(false)}>
+          <div className={modalContainerClass} onClick={(e) => e.stopPropagation()}>
             <h3 className="text-lg font-bold mb-4">选择忌口食物</h3>
             <div className="flex flex-wrap gap-2">
               {dislikeOptions.map((item) => {
@@ -522,12 +641,13 @@ export default function Profile() {
 
       {/* 记录体重弹窗 */}
       {showWeightInput && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center" onClick={() => setShowWeightInput(false)}>
+        <div className={modalOverlayClass} onClick={() => setShowWeightInput(false)}>
           <div className="w-full max-w-sm mx-auto bg-white rounded-3xl p-6 mx-4" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-lg font-bold mb-4 text-center">记录今日体重</h3>
             <div className="relative">
               <input
                 type="number"
+                step="0.1"
                 value={newWeight}
                 onChange={(e) => setNewWeight(e.target.value)}
                 placeholder="请输入体重 (kg)"
@@ -556,10 +676,10 @@ export default function Profile() {
 
       {/* 性别选择弹窗 */}
       {showGenderPicker && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-end" onClick={() => setShowGenderPicker(false)}>
-          <div className="w-full max-w-md mx-auto bg-white rounded-t-3xl p-5 max-h-[70vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <div className={modalOverlayClass} onClick={() => setShowGenderPicker(false)}>
+          <div className={modalContainerClass} onClick={(e) => e.stopPropagation()}>
             <h3 className="text-lg font-bold mb-4">选择性别</h3>
-            <div className="space-y-2 pb-2">
+            <div className="space-y-2">
               {[
                 { key: 'male', label: '男', icon: '👨' },
                 { key: 'female', label: '女', icon: '👩' },
