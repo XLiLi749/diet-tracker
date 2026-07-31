@@ -492,6 +492,96 @@ export const FOOD_DATABASE = [
   { id: 'beef_offal_noodle', name: '牛杂面', category: '零食', calories: 170, protein: 14.0, carbs: 22.0, fat: 4.5, fiber: 1.0, tags: ['粤菜', '面食'], price: [16, 26] },
   { id: 'rice_tofu_pudding', name: '豆花', category: '零食', calories: 55, protein: 4.0, carbs: 8.0, fat: 1.0, fiber: 0.3, tags: ['川菜', '甜口'], price: [4, 8] },
   { id: 'suanla_fen', name: '酸辣粉', category: '零食', calories: 160, protein: 4.0, carbs: 28.0, fat: 4.5, fiber: 1.5, tags: ['川菜', '辣', '面食'], price: [10, 18] },
+
+  // ============== 零食·卤味熟食 ==============
+  { id: 'snack_chicken_wing_root', name: '卤鸡翅根', category: '零食', calories: 220, protein: 20.0, carbs: 2.0, fat: 15.0, fiber: 0, tags: ['卤味', '高蛋白', '加餐', '偶尔吃'], price: [5, 8] },
+  { id: 'snack_chicken_feet', name: '卤鸡爪', category: '零食', calories: 250, protein: 23.0, carbs: 3.0, fat: 16.0, fiber: 0, tags: ['卤味', '加餐', '偶尔吃'], price: [3, 6] },
+  { id: 'snack_duck_neck', name: '卤鸭脖', category: '零食', calories: 230, protein: 22.0, carbs: 4.0, fat: 14.0, fiber: 0, tags: ['卤味', '辣', '高蛋白', '加餐'], price: [6, 12] },
+  { id: 'snack_tea_egg', name: '卤蛋', category: '零食', calories: 150, protein: 12.0, carbs: 2.0, fat: 10.0, fiber: 0, tags: ['卤味', '高蛋白', '加餐'], price: [2, 3] },
+  { id: 'snack_roasted_chicken_leg', name: '卤鸡腿', category: '零食', calories: 210, protein: 22.0, carbs: 2.0, fat: 13.0, fiber: 0, tags: ['卤味', '高蛋白', '加餐'], price: [8, 15] },
+  { id: 'snack_duck_wing', name: '卤鸭翅', category: '零食', calories: 240, protein: 20.0, carbs: 3.0, fat: 16.0, fiber: 0, tags: ['卤味', '加餐'], price: [4, 8] },
+  { id: 'snack_tiger_feet', name: '虎皮凤爪', category: '零食', calories: 280, protein: 20.0, carbs: 5.0, fat: 20.0, fiber: 0, tags: ['卤味', '粤菜', '加餐'], price: [8, 15] },
+  { id: 'snack_sausage_grilled', name: '烤肠', category: '零食', calories: 300, protein: 12.0, carbs: 10.0, fat: 25.0, fiber: 0, tags: ['加工肉', '高热量', '加餐'], price: [3, 6] },
+  { id: 'snack_ham_sausage', name: '火腿肠', category: '零食', calories: 210, protein: 10.0, carbs: 15.0, fat: 13.0, fiber: 0, tags: ['加工肉', '加餐'], price: [1, 3] },
+
+  // ============== 零食·膨化干脆 ==============
+  { id: 'snack_crispy_noodle', name: '干脆面', category: '零食', calories: 480, protein: 9.0, carbs: 58.0, fat: 24.0, fiber: 1.5, tags: ['膨化', '高碳水', '高热量', '加餐'], price: [1, 3] },
+  { id: 'snack_chips', name: '薯片', category: '零食', calories: 540, protein: 7.0, carbs: 52.0, fat: 34.0, fiber: 3.0, tags: ['膨化', '高热量', '加餐', '偶尔吃'], price: [5, 10] },
+  { id: 'snack_french_fries', name: '薯条', category: '零食', calories: 310, protein: 4.0, carbs: 42.0, fat: 15.0, fiber: 3.0, tags: ['膨化', '高碳水', '加餐'], price: [8, 15] },
+  { id: 'snack_shrimp_chips', name: '虾条', category: '零食', calories: 480, protein: 5.0, carbs: 55.0, fat: 27.0, fiber: 1.0, tags: ['膨化', '高热量', '加餐'], price: [3, 6] },
+  { id: 'snack_biscuit', name: '饼干', category: '零食', calories: 450, protein: 7.0, carbs: 62.0, fat: 20.0, fiber: 1.5, tags: ['高碳水', '加餐'], price: [5, 10] },
+  { id: 'snack_soda_cracker', name: '苏打饼干', category: '零食', calories: 420, protein: 9.0, carbs: 68.0, fat: 12.0, fiber: 2.0, tags: ['加餐'], price: [4, 8] },
+  { id: 'snack_wafer', name: '威化饼干', category: '零食', calories: 490, protein: 6.0, carbs: 60.0, fat: 26.0, fiber: 0.5, tags: ['高糖', '高热量', '加餐'], price: [3, 8] },
+  { id: 'snack_rice_cracker', name: '锅巴', category: '零食', calories: 500, protein: 8.0, carbs: 60.0, fat: 26.0, fiber: 1.5, tags: ['膨化', '高热量', '加餐'], price: [3, 6] },
+
+  // ============== 零食·乳饮乳品 ==============
+  { id: 'snack_yogurt_drink', name: '优酸乳', category: '零食', calories: 70, protein: 1.5, carbs: 14.0, fat: 1.0, fiber: 0, tags: ['乳饮', '甜口', '加餐'], price: [3, 5] },
+  { id: 'snack_flavored_yogurt', name: '风味酸奶', category: '零食', calories: 95, protein: 3.5, carbs: 16.0, fat: 2.5, fiber: 0, tags: ['乳饮', '甜口', '加餐'], price: [5, 8] },
+  { id: 'snack_breakfast_milk', name: '早餐奶', category: '零食', calories: 65, protein: 2.5, carbs: 10.0, fat: 2.0, fiber: 0, tags: ['乳饮', '甜口', '加餐'], price: [3, 5] },
+  { id: 'snack_ad_calcium', name: 'AD钙奶', category: '零食', calories: 55, protein: 1.5, carbs: 9.0, fat: 1.5, fiber: 0, tags: ['乳饮', '甜口', '加餐'], price: [2, 4] },
+  { id: 'snack_lactic_acid', name: '乳酸菌饮料', category: '零食', calories: 60, protein: 1.0, carbs: 13.0, fat: 0.5, fiber: 0, tags: ['乳饮', '甜口', '加餐'], price: [4, 7] },
+
+  // ============== 零食·速食主食 ==============
+  { id: 'snack_instant_noodle_cup', name: '桶装泡面', category: '零食', calories: 430, protein: 10.0, carbs: 58.0, fat: 18.0, fiber: 1.5, tags: ['速食', '高热量', '独立餐食'], price: [5, 8] },
+  { id: 'snack_instant_noodle_bag', name: '袋装泡面', category: '零食', calories: 450, protein: 10.0, carbs: 60.0, fat: 20.0, fiber: 1.5, tags: ['速食', '高热量', '独立餐食'], price: [3, 5] },
+  { id: 'snack_instant_noodle_mix', name: '干拌面', category: '零食', calories: 480, protein: 11.0, carbs: 62.0, fat: 22.0, fiber: 1.5, tags: ['速食', '高热量', '独立餐食'], price: [5, 8] },
+  { id: 'snack_self_heating_rice', name: '自热米饭', category: '零食', calories: 380, protein: 12.0, carbs: 55.0, fat: 13.0, fiber: 1.5, tags: ['速食', '独立餐食'], price: [12, 20] },
+  { id: 'snack_bread', name: '面包', category: '零食', calories: 310, protein: 9.0, carbs: 52.0, fat: 6.0, fiber: 2.0, tags: ['早餐', '加餐'], price: [3, 6] },
+  { id: 'snack_toast', name: '吐司面包', category: '零食', calories: 290, protein: 9.0, carbs: 50.0, fat: 5.0, fiber: 2.5, tags: ['早餐', '加餐'], price: [8, 15] },
+  { id: 'snack_sandwich', name: '三明治', category: '零食', calories: 260, protein: 12.0, carbs: 28.0, fat: 10.0, fiber: 1.5, tags: ['早餐', '便携'], price: [8, 15] },
+  { id: 'snack_rice_ball', name: '饭团', category: '零食', calories: 200, protein: 6.0, carbs: 35.0, fat: 4.0, fiber: 1.0, tags: ['便携', '早餐'], price: [5, 10] },
+
+  // ============== 零食·饮料甜品 ==============
+  { id: 'snack_cola', name: '可乐', category: '零食', calories: 43, protein: 0, carbs: 10.6, fat: 0, fiber: 0, tags: ['饮料', '高糖', '偶尔吃'], price: [3, 5] },
+  { id: 'snack_sprite', name: '雪碧', category: '零食', calories: 42, protein: 0, carbs: 10.0, fat: 0, fiber: 0, tags: ['饮料', '高糖', '偶尔吃'], price: [3, 5] },
+  { id: 'snack_bottled_milk_tea', name: '瓶装奶茶', category: '零食', calories: 65, protein: 1.0, carbs: 14.0, fat: 1.0, fiber: 0, tags: ['饮料', '高糖', '甜口', '偶尔吃'], price: [5, 8] },
+  { id: 'snack_canned_coffee', name: '罐装咖啡', category: '零食', calories: 50, protein: 1.0, carbs: 8.0, fat: 1.5, fiber: 0, tags: ['饮料', '提神'], price: [5, 10] },
+  { id: 'snack_popsicle', name: '雪糕', category: '零食', calories: 120, protein: 2.0, carbs: 20.0, fat: 4.0, fiber: 0, tags: ['甜品', '高糖', '偶尔吃'], price: [3, 6] },
+  { id: 'snack_ice_cream', name: '冰淇淋', category: '零食', calories: 200, protein: 3.5, carbs: 25.0, fat: 10.0, fiber: 0, tags: ['甜品', '高糖', '高热量', '偶尔吃'], price: [8, 15] },
+  { id: 'snack_chocolate', name: '巧克力', category: '零食', calories: 546, protein: 4.9, carbs: 52.0, fat: 35.0, fiber: 3.0, tags: ['甜品', '高糖', '高热量', '加餐'], price: [8, 20] },
+  { id: 'snack_candy', name: '糖果', category: '零食', calories: 400, protein: 0, carbs: 98.0, fat: 2.0, fiber: 0, tags: ['甜品', '高糖', '偶尔吃'], price: [2, 5] },
+
+  // ============== 零食·坚果果干 ==============
+  { id: 'snack_sunflower_seeds', name: '瓜子', category: '零食', calories: 600, protein: 23.0, carbs: 18.0, fat: 50.0, fiber: 5.0, tags: ['坚果', '高蛋白', '高脂肪', '加餐'], price: [5, 10] },
+  { id: 'snack_peanut_salted', name: '五香花生', category: '零食', calories: 580, protein: 25.0, carbs: 16.0, fat: 48.0, fiber: 6.0, tags: ['坚果', '高蛋白', '高脂肪', '加餐'], price: [3, 6] },
+  { id: 'snack_daily_nuts', name: '每日坚果', category: '零食', calories: 580, protein: 18.0, carbs: 22.0, fat: 48.0, fiber: 7.0, tags: ['坚果', '高蛋白', '加餐'], price: [5, 10] },
+  { id: 'snack_raisin', name: '葡萄干', category: '零食', calories: 320, protein: 3.0, carbs: 78.0, fat: 0.5, fiber: 2.0, tags: ['果干', '高糖', '加餐'], price: [5, 10] },
+  { id: 'snack_dried_mango', name: '芒果干', category: '零食', calories: 310, protein: 1.5, carbs: 75.0, fat: 1.5, fiber: 2.5, tags: ['果干', '高糖', '加餐'], price: [8, 15] },
+
+  // ============== 菜系·川菜补充 ==============
+  { id: 'dish_shuizhu_roupian', name: '水煮肉片', category: '肉类', calories: 245, protein: 22.0, carbs: 8.0, fat: 15.0, fiber: 1.0, tags: ['川菜', '辣', '高蛋白', '家常菜', '重油'], price: [22, 35] },
+  { id: 'dish_shuizhu_fish', name: '水煮鱼', category: '肉类', calories: 200, protein: 25.0, carbs: 5.0, fat: 10.0, fiber: 1.0, tags: ['川菜', '辣', '高蛋白', '家常菜', '重油'], price: [35, 55] },
+  { id: 'dish_yuxiang_rousi', name: '鱼香肉丝', category: '肉类', calories: 185, protein: 15.0, carbs: 12.0, fat: 9.0, fiber: 1.0, tags: ['川菜', '家常菜'], price: [18, 28] },
+  { id: 'dish_koushui_ji', name: '口水鸡', category: '肉类', calories: 220, protein: 22.0, carbs: 6.0, fat: 13.0, fiber: 1.0, tags: ['川菜', '辣', '高蛋白', '凉菜'], price: [25, 40] },
+
+  // ============== 菜系·赣菜补充 ==============
+  { id: 'dish_xiaochao_huangniurou', name: '小炒黄牛肉', category: '肉类', calories: 210, protein: 24.0, carbs: 6.0, fat: 11.0, fiber: 1.0, tags: ['赣菜', '辣', '高蛋白', '家常菜', '重油'], price: [28, 45] },
+  { id: 'dish_fenzheng_rou', name: '粉蒸肉', category: '肉类', calories: 295, protein: 15.0, carbs: 18.0, fat: 19.0, fiber: 1.5, tags: ['赣菜', '家常菜', '高热量'], price: [22, 38] },
+  { id: 'dish_duojiao_yutou_gan', name: '剁椒鱼头（赣菜）', category: '肉类', calories: 155, protein: 20.0, carbs: 6.0, fat: 6.0, fiber: 1.0, tags: ['赣菜', '辣', '高蛋白'], price: [45, 70] },
+  { id: 'dish_pijiu_ya', name: '啤酒鸭', category: '肉类', calories: 260, protein: 22.0, carbs: 6.0, fat: 17.0, fiber: 1.0, tags: ['赣菜', '家常菜', '高蛋白'], price: [30, 48] },
+  { id: 'dish_waguan_tang', name: '瓦罐汤', category: '汤类', calories: 65, protein: 5.0, carbs: 4.0, fat: 3.5, fiber: 0.5, tags: ['赣菜', '汤类', '早餐', '养胃'], price: [5, 10] },
+  { id: 'dish_ganchaofen', name: '江西炒粉', category: '主食', calories: 195, protein: 6.0, carbs: 34.0, fat: 5.0, fiber: 1.5, tags: ['赣菜', '面食', '独立餐食'], price: [10, 18] },
+
+  // ============== 菜系·湘菜补充 ==============
+  { id: 'dish_duojiao_yutou_xiang', name: '剁椒鱼头（湘菜）', category: '肉类', calories: 150, protein: 20.0, carbs: 5.0, fat: 6.0, fiber: 1.0, tags: ['湘菜', '辣', '高蛋白'], price: [48, 75] },
+  { id: 'dish_xiaochao_rou', name: '湘菜小炒肉', category: '肉类', calories: 260, protein: 18.0, carbs: 5.0, fat: 20.0, fiber: 1.0, tags: ['湘菜', '辣', '家常菜', '重油'], price: [22, 38] },
+  { id: 'dish_ganguo_qianyedoufu', name: '干锅千叶豆腐', category: '豆制品', calories: 195, protein: 14.0, carbs: 10.0, fat: 12.0, fiber: 2.0, tags: ['湘菜', '辣', '家常菜', '重油'], price: [18, 28] },
+  { id: 'dish_duojiao_jidan', name: '剁椒鸡蛋', category: '蛋奶', calories: 180, protein: 12.0, carbs: 5.0, fat: 13.0, fiber: 0.5, tags: ['湘菜', '辣', '家常菜'], price: [12, 20] },
+  { id: 'dish_lawei_hezheng', name: '腊味合蒸', category: '肉类', calories: 310, protein: 20.0, carbs: 5.0, fat: 24.0, fiber: 0.5, tags: ['湘菜', '家常菜', '高热量'], price: [35, 55] },
+
+  // ============== 通用家常菜补充 ==============
+  { id: 'dish_fanqie_chaodan', name: '番茄炒蛋', category: '蛋奶', calories: 125, protein: 8.0, carbs: 8.0, fat: 8.0, fiber: 0.8, tags: ['家常菜', '食堂常见'], price: [10, 18] },
+  { id: 'dish_tudou_dun_niurou', name: '土豆炖牛肉', category: '肉类', calories: 180, protein: 18.0, carbs: 12.0, fat: 7.0, fiber: 1.5, tags: ['家常菜', '高蛋白', '滋补'], price: [28, 45] },
+  { id: 'dish_qingjiao_rousi', name: '青椒肉丝', category: '肉类', calories: 175, protein: 16.0, carbs: 6.0, fat: 10.0, fiber: 1.0, tags: ['家常菜', '食堂常见'], price: [15, 25] },
+  { id: 'dish_disanxian', name: '地三鲜', category: '蔬菜', calories: 160, protein: 3.0, carbs: 18.0, fat: 9.0, fiber: 2.0, tags: ['家常菜', '东北菜'], price: [12, 20] },
+  { id: 'dish_tangcu_liji', name: '糖醋里脊', category: '肉类', calories: 260, protein: 18.0, carbs: 22.0, fat: 12.0, fiber: 0.5, tags: ['家常菜', '甜口'], price: [25, 40] },
+
+  // ============== 粉面主食补充 ==============
+  { id: 'dish_beef_noodle', name: '牛肉面', category: '主食', calories: 165, protein: 14.0, carbs: 22.0, fat: 4.0, fiber: 1.5, tags: ['面食', '独立餐食', '高蛋白'], price: [15, 25] },
+  { id: 'dish_nanchang_banfen', name: '南昌拌粉', category: '主食', calories: 185, protein: 5.5, carbs: 32.0, fat: 5.0, fiber: 1.5, tags: ['赣菜', '面食', '独立餐食', '早餐'], price: [8, 15] },
+  { id: 'dish_hunan_mifen', name: '湖南米粉', category: '主食', calories: 155, protein: 6.0, carbs: 26.0, fat: 3.5, fiber: 1.0, tags: ['湘菜', '面食', '独立餐食'], price: [10, 18] },
+  { id: 'dish_liangpi', name: '凉皮', category: '主食', calories: 130, protein: 4.0, carbs: 24.0, fat: 2.5, fiber: 1.0, tags: ['面食', '独立餐食', '凉菜'], price: [8, 15] },
+  { id: 'dish_roujiamo', name: '肉夹馍', category: '主食', calories: 260, protein: 14.0, carbs: 28.0, fat: 10.0, fiber: 1.5, tags: ['西北菜', '独立餐食', '便携'], price: [10, 18] },
 ]
 
 // 按ID查询食物
