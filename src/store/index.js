@@ -43,6 +43,9 @@ const useStore = create(
         tastes: [],     // 收藏的口味标签
       },
 
+      // 美食手账记录
+      journals: [],
+
       toggleFavoriteFood: (foodId) => {
         const { favorites } = get()
         const foods = favorites.foods.includes(foodId)
@@ -750,6 +753,42 @@ const useStore = create(
         return { success: true, msg: '登录成功' }
       },
 
+      // ========== 美食手账相关 ==========
+      addJournal: (journal) => {
+        const { journals } = get()
+        const newJournal = {
+          id: 'j_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+          createdAt: new Date().toISOString(),
+          ...journal,
+        }
+        set({ journals: [newJournal, ...journals] })
+        return newJournal
+      },
+
+      updateJournal: (id, updates) => {
+        const { journals } = get()
+        set({
+          journals: journals.map(j => j.id === id ? { ...j, ...updates } : j)
+        })
+      },
+
+      deleteJournal: (id) => {
+        const { journals } = get()
+        set({ journals: journals.filter(j => j.id !== id) })
+      },
+
+      getJournalById: (id) => {
+        return get().journals.find(j => j.id === id)
+      },
+
+      getJournalsByDate: (date) => {
+        return get().journals.filter(j => j.date === date)
+      },
+
+      getAllJournals: () => {
+        return get().journals
+      },
+
       logoutAccount: () => {
         const { currentUser } = get()
         if (currentUser) {
@@ -760,6 +799,7 @@ const useStore = create(
             foodLogs: state.foodLogs,
             bodyRecords: state.bodyRecords,
             tastePreferences: state.tastePreferences,
+            journals: state.journals,
           }
           localStorage.setItem(`diet-tracker-user-${currentUser}`, JSON.stringify(data))
         }
@@ -786,6 +826,7 @@ const useStore = create(
         bodyRecords: state.bodyRecords,
         tastePreferences: state.tastePreferences,
         favorites: state.favorites,
+        journals: state.journals,
       }),
     }
   )

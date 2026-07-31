@@ -5,6 +5,9 @@ import FoodLog from './pages/FoodLog'
 import Recommendation from './pages/Recommendation'
 import Stats from './pages/Stats'
 import Profile from './pages/Profile'
+import Journal from './pages/Journal'
+import JournalCreate from './pages/JournalCreate'
+import JournalDetail from './pages/JournalDetail'
 import BottomNav from './components/BottomNav'
 
 function App() {
@@ -22,6 +25,9 @@ function App() {
         <Route path="/recommend" element={<Recommendation />} />
         <Route path="/stats" element={<Stats />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/journal" element={<Journal />} />
+        <Route path="/journal/create" element={<JournalCreate />} />
+        <Route path="/journal/:id" element={<JournalDetail />} />
       </Routes>
       <BottomNav />
     </div>
