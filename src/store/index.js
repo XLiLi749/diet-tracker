@@ -87,9 +87,12 @@ const useStore = create(
       },
 
       getTodaySummary: () => {
+        return get().getSummaryByDate(dayjs().format('YYYY-MM-DD'))
+      },
+
+      getSummaryByDate: (date) => {
         const { foodLogs, targets } = get()
-        const today = dayjs().format('YYYY-MM-DD')
-        const logs = foodLogs[today] || []
+        const logs = foodLogs[date] || []
 
         let calories = 0, protein = 0, carbs = 0, fat = 0
         logs.forEach(log => {
@@ -358,84 +361,139 @@ const useStore = create(
           }
         }
 
-        // ========== 生成各餐次（加入菜系特色搭配） ==========
+        // ========== 生成各餐次（严格按正常人饮食习惯） ==========
         // 判断当前偏好菜系
         const preferredCuisines = mergedPreferences.filter(p => ['川菜', '湘菜', '赣菜', '粤菜', '东北菜', '江浙菜'].includes(p))
-        const hasCuisinePref = preferredCuisines.length > 0
 
-        // 早餐：菜系特色优先
-        let breakfastItems = []
-        let breakfastName = ''
+        // 当日已用食物id，避免重复
+        const usedTodayIds = new Set()
 
-        if (preferredCuisines.includes('赣菜')) {
-          // 赣菜特色：南昌拌粉 + 瓦罐汤
-          const ganfen = pickByTags(['赣菜', '面食'], 1)[0] || pickByTags(['面食'], 1)[0]
-          const waguan = pickByTags(['赣菜', '汤类'], 1)[0] || pickByTags(['汤类'], 1)[0]
-          if (ganfen) breakfastItems.push({ food: ganfen, qty: 200 })
-          if (waguan) breakfastItems.push({ food: waguan, qty: 200 })
-          breakfastName = ganfen && waguan ? `${ganfen.name} + ${waguan.name}` : ''
-        } else if (preferredCuisines.includes('湘菜')) {
-          // 湘菜特色：湖南米粉 + 豆浆/蛋
-          const noodles = pickByTags(['湘菜', '面食'], 1)[0] || pickByTags(['面食'], 1)[0]
-          const soy = pickByTags(['早餐', '蛋奶'], 1)[0] || pickByCategory('蛋奶', 1)[0]
-          if (noodles) breakfastItems.push({ food: noodles, qty: 200 })
-          if (soy) breakfastItems.push({ food: soy, qty: 150 })
-          breakfastName = noodles && soy ? `${noodles.name} + ${soy.name}` : ''
-        } else if (preferredCuisines.includes('粤菜')) {
-          // 粤菜特色：粥 + 点心/肠粉
-          const congee = pickByTags(['粤菜', '汤类'], 1)[0] || pickByTags(['汤类'], 1)[0]
-          const dimsum = pickByTags(['粤菜', '早餐'], 1)[0] || pickByCategory('主食', 1)[0]
-          if (congee) breakfastItems.push({ food: congee, qty: 250 })
-          if (dimsum) breakfastItems.push({ food: dimsum, qty: 100 })
-          breakfastName = congee && dimsum ? `${congee.name} + ${dimsum.name}` : ''
-        } else if (preferredCuisines.includes('川菜')) {
-          // 川菜特色：小面 + 豆浆
-          const noodles = pickByTags(['川菜', '面食'], 1)[0] || pickByTags(['面食'], 1)[0]
-          const soy = pickByTags(['早餐', '蛋奶'], 1)[0] || pickByCategory('蛋奶', 1)[0]
-          if (noodles) breakfastItems.push({ food: noodles, qty: 200 })
-          if (soy) breakfastItems.push({ food: soy, qty: 150 })
-          breakfastName = noodles && soy ? `${noodles.name} + ${soy.name}` : ''
-        } else if (preferredCuisines.includes('东北菜')) {
-          // 东北特色：包子 + 粥/豆浆
-          const bun = pickByTags(['东北菜', '主食'], 1)[0] || pickByTags(['主食', '早餐'], 1)[0]
-          const soy = pickByTags(['早餐', '蛋奶'], 1)[0] || pickByTags(['汤类'], 1)[0]
-          if (bun) breakfastItems.push({ food: bun, qty: 150 })
-          if (soy) breakfastItems.push({ food: soy, qty: 200 })
-          breakfastName = bun && soy ? `${bun.name} + ${soy.name}` : ''
+        // ========== 早餐：严格只选早餐类，清淡为主，绝对不选肉类大菜 ==========
+        const isBreakfastFood = (f) => {
+          const tags = f.tags || []
+          if (!tags.includes('早餐')) return false
+          if (f.category === '肉类') return false
+          if (activeScene === 'gym' && tags.includes('油炸')) return false
+          return true
         }
 
-        // 没有菜系偏好或没选到菜，走通用早餐逻辑
-        if (breakfastItems.length === 0) {
-          const breakfastStaple = pickByTags(['早餐', '主食'], 1)[0] || pickByCategory('主食', 1)[0]
-          const breakfastEgg = pickByTags(['早餐'], 1, breakfastStaple ? [breakfastStaple.id] : [])[0] || pickByCategory('蛋奶', 1)[0]
-          if (breakfastStaple) breakfastItems.push({ food: breakfastStaple, qty: breakfastStaple.category === '主食' ? 150 : 100 })
-          if (breakfastEgg) breakfastItems.push({ food: breakfastEgg, qty: breakfastEgg.category === '蛋奶' ? 100 : 50 })
+        const pickBreakfastFoods = () => {
+          const candidates = FOOD_DATABASE.filter(f => isFoodOk(f) && isBreakfastFood(f))
+          candidates.sort((a, b) => scoreFood(b) - scoreFood(a))
+          // 菜系特色优先
+          if (preferredCuisines.includes('赣菜')) {
+            const ganfen = candidates.find(f => f.tags?.includes('赣菜') && f.tags?.includes('面食'))
+            const waguan = candidates.find(f => f.tags?.includes('赣菜') && f.tags?.includes('汤类'))
+            if (ganfen && waguan) return [{ food: ganfen, qty: 200 }, { food: waguan, qty: 200 }]
+          }
+          if (preferredCuisines.includes('湘菜')) {
+            const noodles = candidates.find(f => (f.tags?.includes('湘菜') && f.tags?.includes('面食')) || f.tags?.includes('面食'))
+            const soy = candidates.find(f => f.category === '蛋奶')
+            if (noodles) return [{ food: noodles, qty: 200 }, ...(soy && soy.id !== noodles.id ? [{ food: soy, qty: 150 }] : [])]
+          }
+          if (preferredCuisines.includes('粤菜')) {
+            const congee = candidates.find(f => f.name.includes('粥')) || candidates.find(f => f.tags?.includes('粤菜'))
+            const dimsum = candidates.find(f => (f.name.includes('肠粉') || f.name.includes('烧卖') || f.tags?.includes('粤菜')) && (!congee || f.id !== congee.id))
+            if (congee) return [{ food: congee, qty: 250 }, ...(dimsum ? [{ food: dimsum, qty: 100 }] : [])]
+          }
+          if (preferredCuisines.includes('川菜')) {
+            const noodles = candidates.find(f => f.tags?.includes('川菜') && f.tags?.includes('面食')) || candidates.find(f => f.tags?.includes('面食'))
+            const soy = candidates.find(f => f.category === '蛋奶')
+            if (noodles) return [{ food: noodles, qty: 200 }, ...(soy && soy.id !== noodles.id ? [{ food: soy, qty: 150 }] : [])]
+          }
+          if (preferredCuisines.includes('东北菜')) {
+            const bun = candidates.find(f => f.name.includes('包')) || candidates.find(f => f.category === '主食')
+            const soy = candidates.find(f => (f.category === '蛋奶' || f.name.includes('粥')) && (!bun || f.id !== bun.id))
+            if (bun) return [{ food: bun, qty: 150 }, ...(soy ? [{ food: soy, qty: 200 }] : [])]
+          }
+          // 通用：从高分早餐里随机选（主食+蛋奶组合）
+          const topCandidates = candidates.slice(0, 8)
+          const staple = topCandidates.find(f => f.category === '主食' || f.category === '汤类') || topCandidates[0]
+          const eggOrMilk = topCandidates.find(f => f.category === '蛋奶' && staple && f.id !== staple.id)
+          const result = []
+          if (staple) result.push({ food: staple, qty: staple.category === '汤类' ? 250 : 150 })
+          if (eggOrMilk) result.push({ food: eggOrMilk, qty: 100 })
+          return result.length > 0 ? result : (topCandidates[0] ? [{ food: topCandidates[0], qty: 150 }] : [])
         }
 
-        const breakfast = buildMeal(breakfastItems, breakfastName)
+        const breakfastItems = pickBreakfastFoods()
+        breakfastItems.forEach(it => usedTodayIds.add(it.food.id))
+        const breakfast = buildMeal(breakfastItems)
 
-        // 午餐：主食(1) + 主菜(1) + 配菜(1)
-        const lunchStaple = pickByTags(['rice', '主食'], 1)[0] || pickByCategory('主食', 1)[0]
-        const lunchMain = pickByCategory('肉类', 1, lunchStaple ? [lunchStaple.id] : [])[0]
-        const lunchSide = pickByCategory('蔬菜', 1, [lunchStaple?.id, lunchMain?.id].filter(Boolean))[0]
-        const lunchItems = []
-        if (lunchStaple) lunchItems.push({ food: lunchStaple, qty: 150 })
-        if (lunchMain) lunchItems.push({ food: lunchMain, qty: 120 })
-        if (lunchSide) lunchItems.push({ food: lunchSide, qty: 100 })
-        const lunch = buildMeal(lunchItems)
+        // ========== 午餐/晚餐：智能判断是否独立餐食 ==========
+        const isStandaloneMeal = (f) => (f.tags || []).includes('独立餐食')
 
-        // 晚餐：主食(1) + 主菜(1) + 蔬菜(1)
-        const usedForDinner = new Set()
-        const dinnerStaple = pickByTags(['rice', '主食', 'light'], 1)[0] || pickByCategory('主食', 1)[0]
-        if (dinnerStaple) usedForDinner.add(dinnerStaple.id)
-        const dinnerMain = pickByTags(['high_protein', '肉类', '水产'], 1, Array.from(usedForDinner))[0] || pickByCategory('肉类', 1, Array.from(usedForDinner))[0]
-        if (dinnerMain) usedForDinner.add(dinnerMain.id)
-        const dinnerVeg = pickByCategory('蔬菜', 1, Array.from(usedForDinner))[0]
-        const dinnerItems = []
-        if (dinnerStaple) dinnerItems.push({ food: dinnerStaple, qty: 120 })
-        if (dinnerMain) dinnerItems.push({ food: dinnerMain, qty: 100 })
-        if (dinnerVeg) dinnerItems.push({ food: dinnerVeg, qty: 100 })
-        const dinner = buildMeal(dinnerItems)
+        const buildMainMeal = (excludeIds = []) => {
+          const allExclude = new Set([...excludeIds, ...usedTodayIds])
+          // 先看独立餐食（粉/面类）
+          const standaloneCandidates = FOOD_DATABASE.filter(f =>
+            isFoodOk(f) && isStandaloneMeal(f) && !allExclude.has(f.id)
+          )
+          standaloneCandidates.sort((a, b) => scoreFood(b) - scoreFood(a))
+
+          // 30% 概率选独立餐食（粉面），70% 概率选米饭+菜组合
+          const shouldPickStandalone = standaloneCandidates.length > 0 && Math.random() < 0.3
+          if (shouldPickStandalone) {
+            const top = standaloneCandidates.slice(0, Math.min(3, standaloneCandidates.length))
+            const pick = top[Math.floor(Math.random() * top.length)]
+            usedTodayIds.add(pick.id)
+            return buildMeal([{ food: pick, qty: 250 }])
+          }
+
+          // 米饭 + 主菜 + 配菜组合
+          const items = []
+          const staple = (() => {
+            const riceCandidates = FOOD_DATABASE.filter(f =>
+              isFoodOk(f) && f.category === '主食' && !isStandaloneMeal(f) && !allExclude.has(f.id)
+              && (f.name.includes('饭') || f.name.includes('粥') || f.name.includes('馒头'))
+            )
+            if (riceCandidates.length === 0) {
+              const backup = FOOD_DATABASE.filter(f =>
+                isFoodOk(f) && f.category === '主食' && !isStandaloneMeal(f) && !allExclude.has(f.id)
+              )
+              backup.sort((a, b) => scoreFood(b) - scoreFood(a))
+              return backup[0]
+            }
+            riceCandidates.sort((a, b) => scoreFood(b) - scoreFood(a))
+            return riceCandidates[Math.floor(Math.random() * Math.min(3, riceCandidates.length))]
+          })()
+          if (staple) {
+            items.push({ food: staple, qty: 150 })
+            allExclude.add(staple.id)
+          }
+
+          const mainDish = (() => {
+            const candidates = FOOD_DATABASE.filter(f =>
+              isFoodOk(f) && f.category === '肉类' && !allExclude.has(f.id)
+            )
+            candidates.sort((a, b) => scoreFood(b) - scoreFood(a))
+            const top = candidates.slice(0, Math.min(5, candidates.length))
+            return top[Math.floor(Math.random() * top.length)]
+          })()
+          if (mainDish) {
+            items.push({ food: mainDish, qty: 120 })
+            allExclude.add(mainDish.id)
+          }
+
+          const sideDish = (() => {
+            const candidates = FOOD_DATABASE.filter(f =>
+              isFoodOk(f) && f.category === '蔬菜' && !allExclude.has(f.id)
+            )
+            candidates.sort((a, b) => scoreFood(b) - scoreFood(a))
+            const top = candidates.slice(0, Math.min(5, candidates.length))
+            return top[Math.floor(Math.random() * top.length)]
+          })()
+          if (sideDish) {
+            items.push({ food: sideDish, qty: 100 })
+            allExclude.add(sideDish.id)
+          }
+
+          items.forEach(it => usedTodayIds.add(it.food.id))
+          return buildMeal(items)
+        }
+
+        const lunch = buildMainMeal()
+        const dinner = buildMainMeal()
 
         // 加餐：水果/蛋奶/坚果
         const snack = (() => {

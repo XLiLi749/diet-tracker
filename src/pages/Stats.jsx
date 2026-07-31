@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Legend,
@@ -24,9 +24,29 @@ export default function Stats() {
     foodLogs,
   } = useStore()
 
-  const [timeRange, setTimeRange] = useState('week') // week | month
+  const [timeRange, setTimeRange] = useState('week') // week | month | custom
+  const [customStart, setCustomStart] = useState(dayjs().subtract(7, 'day').format('YYYY-MM-DD'))
+  const [customEnd, setCustomEnd] = useState(dayjs().format('YYYY-MM-DD'))
+  const [showCustomPicker, setShowCustomPicker] = useState(false)
 
-  const weightData = getWeightTrend(timeRange === 'week' ? 7 : 28)
+  // 计算实际的起止日期
+  const { rangeStart, rangeEnd, rangeDays } = useMemo(() => {
+    const today = dayjs()
+    if (timeRange === 'week') {
+      return { rangeStart: today.subtract(6, 'day'), rangeEnd: today, rangeDays: 7 }
+    }
+    if (timeRange === 'month') {
+      return { rangeStart: today.subtract(29, 'day'), rangeEnd: today, rangeDays: 30 }
+    }
+    // custom
+    return {
+      rangeStart: dayjs(customStart),
+      rangeEnd: dayjs(customEnd),
+      rangeDays: dayjs(customEnd).diff(dayjs(customStart), 'day') + 1,
+    }
+  }, [timeRange, customStart, customEnd])
+
+  const weightData = getWeightTrend(rangeDays)
   const weeklyStats = getWeeklyStats()
 
   // 计算连续打卡天数
@@ -41,11 +61,11 @@ export default function Stats() {
     }
   }
 
-  // 周均营养统计
+  // 所选时间段的日均营养统计
   const weeklyAvg = (() => {
     let cals = 0, protein = 0, carbs = 0, fat = 0, days = 0
-    for (let i = 0; i < 7; i++) {
-      const date = today.subtract(i, 'day').format('YYYY-MM-DD')
+    for (let d = rangeStart; d.isBefore(rangeEnd) || d.isSame(rangeEnd, 'day'); d = d.add(1, 'day')) {
+      const date = d.format('YYYY-MM-DD')
       const logs = foodLogs[date] || []
       if (logs.length > 0) {
         days++
@@ -65,6 +85,23 @@ export default function Stats() {
       fat: Math.round(fat / days * 10) / 10,
     }
   })()
+
+  // 所选时间段的每日热量（用于柱状图）
+  const dailyCalories = useMemo(() => {
+    const data = []
+    for (let d = rangeStart; d.isBefore(rangeEnd) || d.isSame(rangeEnd, 'day'); d = d.add(1, 'day')) {
+      const date = d.format('YYYY-MM-DD')
+      const logs = foodLogs[date] || []
+      let cals = 0
+      logs.forEach(l => { cals += l.totalNutrition.calories })
+      data.push({
+        date,
+        weekday: d.format('MM/DD'),
+        calories: cals,
+      })
+    }
+    return data
+  }, [rangeStart, rangeEnd, foodLogs])
 
   // 体重变化
   const weightChange = (() => {
@@ -96,7 +133,7 @@ export default function Stats() {
       {/* 顶部 */}
       <div className="bg-gradient-to-r from-blue-500 to-primary-400 text-white px-5 pt-12 pb-8 rounded-b-3xl">
         <h1 className="text-xl font-bold">📊 数据统计</h1>
-        <div className="flex gap-3 mt-4">
+        <div className="flex gap-2 mt-4 flex-wrap">
           <button
             onClick={() => setTimeRange('week')}
             className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
@@ -112,6 +149,14 @@ export default function Stats() {
             }`}
           >
             本月
+          </button>
+          <button
+            onClick={() => setShowCustomPicker(true)}
+            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+              timeRange === 'custom' ? 'bg-white text-blue-600' : 'bg-white/20 text-white'
+            }`}
+          >
+            {timeRange === 'custom' ? `${customStart.slice(5)} ~ ${customEnd.slice(5)}` : '自定义'}
           </button>
         </div>
       </div>
@@ -187,7 +232,7 @@ export default function Stats() {
       {/* 本周饮食统计 */}
       <div className="px-4 mt-4">
         <div className="card">
-          <h3 className="text-sm font-semibold text-gray-700 mb-4">🍽️ 本周日均摄入</h3>
+          <h3 className="text-sm font-semibold text-gray-700 mb-4">🍽️ {timeRange === 'week' ? '本周' : timeRange === 'month' ? '本月' : '自定义时间段'}日均摄入</h3>
           <div className="grid grid-cols-2 gap-3 mb-4">
             <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-3">
               <p className="text-xs text-orange-600">热量</p>
@@ -214,7 +259,7 @@ export default function Stats() {
           <h4 className="text-xs font-semibold text-gray-500 mb-2">每日热量</h4>
           <div className="h-40 -mx-2">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={weeklyStats} margin={{ top: 5, right: 5, left: -15, bottom: 0 }}>
+              <BarChart data={dailyCalories} margin={{ top: 5, right: 5, left: -15, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
                 <XAxis dataKey="weekday" tick={{ fontSize: 10, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontSize: 10, fill: '#9ca3af' }} axisLine={false} tickLine={false} width={40} />
@@ -378,6 +423,56 @@ export default function Stats() {
           </div>
         </div>
       </div>
+
+      {/* 自定义时间段弹窗 */}
+      {showCustomPicker && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center" onClick={() => setShowCustomPicker(false)}>
+          <div className="w-full max-w-sm mx-auto bg-white rounded-3xl mx-4 p-5" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-bold text-gray-800 text-center mb-5">选择统计时间段</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm text-gray-500 mb-1.5 block">开始日期</label>
+                <input
+                  type="date"
+                  value={customStart}
+                  onChange={(e) => setCustomStart(e.target.value)}
+                  className="w-full bg-gray-100 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary-300"
+                />
+              </div>
+              <div>
+                <label className="text-sm text-gray-500 mb-1.5 block">结束日期</label>
+                <input
+                  type="date"
+                  value={customEnd}
+                  onChange={(e) => setCustomEnd(e.target.value)}
+                  className="w-full bg-gray-100 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary-300"
+                />
+              </div>
+            </div>
+            <div className="flex gap-3 mt-5">
+              <button
+                onClick={() => setShowCustomPicker(false)}
+                className="flex-1 py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold"
+              >
+                取消
+              </button>
+              <button
+                onClick={() => {
+                  if (dayjs(customStart).isAfter(dayjs(customEnd))) {
+                    alert('开始日期不能晚于结束日期')
+                    return
+                  }
+                  setTimeRange('custom')
+                  setShowCustomPicker(false)
+                }}
+                className="flex-1 py-3 bg-primary-500 text-white rounded-xl font-semibold active:bg-primary-600"
+              >
+                确定
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

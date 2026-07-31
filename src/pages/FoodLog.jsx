@@ -18,12 +18,13 @@ export default function FoodLog() {
   const {
     targets,
     getLogsByDate,
-    getTodaySummary,
+    getSummaryByDate,
     addFoodLog,
     deleteFoodLog,
   } = useStore()
 
   const [selectedDate, setSelectedDate] = useState(dayjs().format('YYYY-MM-DD'))
+  const [showDatePicker, setShowDatePicker] = useState(false)
   const [showAddPanel, setShowAddPanel] = useState(false)
   const [selectedMeal, setSelectedMeal] = useState(preselectMeal || 'breakfast')
   const [searchKeyword, setSearchKeyword] = useState('')
@@ -34,7 +35,24 @@ export default function FoodLog() {
   const [aiError, setAiError] = useState(null)
 
   const logs = getLogsByDate(selectedDate)
-  const summary = getTodaySummary()
+  const summary = getSummaryByDate(selectedDate)
+
+  // 生成最近30天的日期选项
+  const dateOptions = useMemo(() => {
+    const options = []
+    const today = dayjs()
+    for (let i = 0; i < 30; i++) {
+      const d = today.subtract(i, 'day')
+      const dateStr = d.format('YYYY-MM-DD')
+      let label = dateStr
+      if (i === 0) label = '今天'
+      else if (i === 1) label = '昨天'
+      else if (i === 2) label = '前天'
+      else label = d.format('MM月DD日 ddd').replace('Mon', '周一').replace('Tue', '周二').replace('Wed', '周三').replace('Thu', '周四').replace('Fri', '周五').replace('Sat', '周六').replace('Sun', '周日')
+      options.push({ value: dateStr, label })
+    }
+    return options
+  }, [])
 
   const searchResults = useMemo(() => searchFood(searchKeyword), [searchKeyword])
 
@@ -231,17 +249,15 @@ export default function FoodLog() {
       <div className="bg-white px-4 pt-4 pb-3 sticky top-0 z-10 shadow-sm">
         <div className="flex items-center justify-between mb-3">
           <h1 className="text-lg font-bold text-gray-800">📸 饮食记录</h1>
-          <div className="flex items-center gap-1 bg-gray-100 rounded-full px-3 py-1.5">
-            <button onClick={goPrevDay} className="w-6 h-6 flex items-center justify-center text-gray-500">‹</button>
+          <button
+            onClick={() => setShowDatePicker(true)}
+            className="flex items-center gap-1 bg-gray-100 rounded-full px-3 py-1.5 active:bg-gray-200"
+          >
             <span className="text-sm font-medium text-gray-700 min-w-[80px] text-center">
               {isToday ? '今天' : selectedDate}
             </span>
-            <button
-              onClick={goNextDay}
-              disabled={isToday}
-              className={`w-6 h-6 flex items-center justify-center ${isToday ? 'text-gray-300' : 'text-gray-500'}`}
-            >›</button>
-          </div>
+            <span className="text-gray-500 text-xs">▼</span>
+          </button>
         </div>
       </div>
 
@@ -569,6 +585,40 @@ export default function FoodLog() {
                   </p>
                 </>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 日期选择弹窗 */}
+      {showDatePicker && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center" onClick={() => setShowDatePicker(false)}>
+          <div className="w-full max-w-sm mx-auto bg-white rounded-3xl mx-4 max-h-[70vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="px-5 py-4 border-b border-gray-100">
+              <h3 className="text-lg font-bold text-gray-800 text-center">选择日期</h3>
+            </div>
+            <div className="flex-1 overflow-y-auto px-3 py-2">
+              {dateOptions.map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => { setSelectedDate(opt.value); setShowDatePicker(false) }}
+                  className={`w-full text-left px-4 py-3 rounded-xl mb-1 transition-colors ${
+                    selectedDate === opt.value
+                      ? 'bg-primary-50 text-primary-600 font-semibold'
+                      : 'hover:bg-gray-50 text-gray-700'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+            <div className="px-5 py-3 border-t border-gray-100">
+              <button
+                onClick={() => setShowDatePicker(false)}
+                className="w-full py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold"
+              >
+                取消
+              </button>
             </div>
           </div>
         </div>
