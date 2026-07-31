@@ -160,11 +160,19 @@ const useStore = create(
       },
 
       deleteFoodLog: (date, logId) => {
-        const { foodLogs } = get()
+        const { foodLogs, journals } = get()
         const dayLogs = foodLogs[date] || []
         const log = dayLogs.find(l => l.id === logId)
         if (log?.photoId) {
           deletePhotoFromDB(log.photoId).catch(() => {})
+        }
+        // 同步删除关联了该记录的手账
+        const linkedJournal = journals.find(j => j.logId === logId)
+        if (linkedJournal) {
+          if (linkedJournal.photoId && linkedJournal.photoId !== log?.photoId) {
+            deletePhotoFromDB(linkedJournal.photoId).catch(() => {})
+          }
+          set({ journals: journals.filter(j => j.id !== linkedJournal.id) })
         }
         set({
           foodLogs: {

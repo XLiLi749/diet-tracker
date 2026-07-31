@@ -299,8 +299,8 @@ export default function JournalCreate() {
 
       {/* 菜品选择弹窗 */}
       {showFoodPicker && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-end" onClick={() => setShowFoodPicker(false)}>
-          <div className="w-full max-w-md mx-auto bg-white rounded-t-3xl p-4 pb-6" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center" onClick={() => setShowFoodPicker(false)}>
+          <div className="w-full max-w-md mx-auto bg-white rounded-3xl p-4 pb-6 max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-3">
               <h3 className="font-bold text-gray-800">添加菜品</h3>
               <button onClick={() => setShowFoodPicker(false)} className="text-gray-400 text-xl">×</button>
@@ -360,8 +360,8 @@ export default function JournalCreate() {
 
       {/* 从记录导入弹窗 */}
       {showImportPanel && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-end" onClick={() => setShowImportPanel(false)}>
-          <div className="w-full max-w-md mx-auto bg-white rounded-t-3xl p-4 pb-6" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center" onClick={() => setShowImportPanel(false)}>
+          <div className="w-full max-w-md mx-auto bg-white rounded-3xl p-4 pb-6 max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-3">
               <h3 className="font-bold text-gray-800">从记录导入</h3>
               <button onClick={() => setShowImportPanel(false)} className="text-gray-400 text-xl">×</button>

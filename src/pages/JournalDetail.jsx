@@ -8,11 +8,27 @@ import { getPhoto } from '../utils/photoStorage'
 export default function JournalDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { getJournalById, deleteJournal } = useStore()
+  const { getJournalById, deleteJournal, foodLogs } = useStore()
   const journal = getJournalById(id)
   const previewRef = useRef(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [photoUrl, setPhotoUrl] = useState(null)
+
+  // 如果手账关联了 logId，从记录中取最新菜品（保持同步）
+  const effectiveItems = (() => {
+    if (!journal) return []
+    if (!journal.logId) return journal.items || []
+    const dayLogs = foodLogs[journal.date] || []
+    const log = dayLogs.find(l => l.id === journal.logId)
+    if (!log) return journal.items || []
+    return log.items.map(it => ({
+      id: it.foodId || it.id,
+      name: it.name,
+      calories: it.calories,
+      foodId: it.foodId,
+      points: [],
+    }))
+  })()
 
   // 从 IndexedDB 加载照片（兼容旧数据：旧版直接存 photo base64，新版存 photoId）
   useEffect(() => {
@@ -47,7 +63,7 @@ export default function JournalDetail() {
     breakfast: '早餐', lunch: '午餐', dinner: '晚餐', snack: '加餐'
   })[type] || type
 
-  const totalCalories = journal.items.reduce((s, i) => s + (i.calories || 0), 0)
+  const totalCalories = effectiveItems.reduce((s, i) => s + (i.calories || 0), 0)
 
   const handleDelete = () => {
     deleteJournal(id)
@@ -65,7 +81,7 @@ export default function JournalDetail() {
     // 计算高度
     const headerH = 60 * scale
     const photoH = photoUrl ? 300 * scale : 0
-    const itemsH = (journal.items.length * 44 + 60) * scale
+    const itemsH = (effectiveItems.length * 44 + 60) * scale
     const footerH = 50 * scale
     canvas.width = W
     canvas.height = headerH + photoH + itemsH + footerH + 40 * scale
@@ -140,7 +156,7 @@ export default function JournalDetail() {
     y += 20 * scale
 
     // 菜品列表
-    journal.items.forEach((item, idx) => {
+    effectiveItems.forEach((item, idx) => {
       // 圆点
       ctx.fillStyle = ['#FF6B6B', '#4ECDC4', '#FFE66D', '#95E1D3', '#F38181'][idx % 5]
       ctx.beginPath()
@@ -174,7 +190,7 @@ export default function JournalDetail() {
 
     ctx.fillStyle = '#666'
     ctx.font = `${13 * scale}px sans-serif`
-    ctx.fillText(`共 ${journal.items.length} 道菜`, 24 * scale, y)
+    ctx.fillText(`共 ${effectiveItems.length} 道菜`, 24 * scale, y)
 
     ctx.fillStyle = '#F5A623'
     ctx.font = `bold ${16 * scale}px sans-serif`
@@ -260,7 +276,7 @@ export default function JournalDetail() {
 
             {/* 菜品列表 */}
             <div className="space-y-2">
-              {journal.items.map((item, idx) => (
+              {effectiveItems.map((item, idx) => (
                 <div key={item.id} className="flex items-center gap-3 py-2 border-b border-gray-50 last:border-0">
                   <div
                     className="w-3 h-3 rounded-full flex-shrink-0"
@@ -281,7 +297,7 @@ export default function JournalDetail() {
 
             {/* 合计 */}
             <div className="flex items-center justify-between mt-3 pt-3 border-t border-dashed border-gray-200">
-              <span className="text-xs text-gray-400">共 {journal.items.length} 道菜</span>
+              <span className="text-xs text-gray-400">共 {effectiveItems.length} 道菜</span>
               <span className="text-sm font-bold text-primary-500">总计约 {totalCalories} kcal</span>
             </div>
 

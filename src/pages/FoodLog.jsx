@@ -166,10 +166,37 @@ export default function FoodLog() {
     setSelectedItems(updated)
   }
 
-  const handleConfirmAdd = () => {
+  const handleConfirmAdd = async () => {
     if (selectedItems.length === 0) return
-    addFoodLog(selectedDate, selectedMeal, selectedItems)
+    const newLog = addFoodLog(selectedDate, selectedMeal, selectedItems)
+
+    // 如果有拍照，同步创建手账（关联 logId，保持同步）
+    if (capturedPhoto && newLog) {
+      try {
+        const compressed = await compressImage(capturedPhoto, 1280, 0.7)
+        const photoId = genPhotoId()
+        await savePhoto(photoId, compressed)
+        addJournal({
+          date: selectedDate,
+          mealType: selectedMeal,
+          note: '',
+          photoId,
+          logId: newLog.id,
+          items: selectedItems.map((p) => ({
+            id: p.foodId,
+            name: p.name,
+            calories: p.calories,
+            foodId: p.foodId,
+            points: [],
+          })),
+        })
+      } catch (e) {
+        console.error('保存手账失败:', e)
+      }
+    }
+
     setSelectedItems([])
+    setCapturedPhoto(null)
     setShowAddPanel(false)
     setSearchKeyword('')
   }
@@ -231,33 +258,7 @@ export default function FoodLog() {
         }
       })
 
-      // 自动创建手账记录（照片先压缩存 IndexedDB，避免 localStorage 溢出）
-      if (capturedPhoto && picks.length > 0) {
-        let photoId = null
-        try {
-          const compressed = await compressImage(capturedPhoto, 1280, 0.7)
-          photoId = genPhotoId()
-          await savePhoto(photoId, compressed)
-        } catch (e) {
-          console.error('保存照片失败:', e)
-        }
-        addJournal({
-          date: selectedDate,
-          mealType: selectedMeal,
-          note: '',
-          photoId,
-          items: picks.map((p, idx) => ({
-            id: p.foodId,
-            name: p.name,
-            calories: p.calories,
-            foodId: p.foodId,
-            points: [], // 暂时没有勾边数据
-          })),
-        })
-      }
-
       setSelectedItems(picks)
-      setCapturedPhoto(null)
       setShowAiPanel(false)
       setShowAddPanel(true)
 

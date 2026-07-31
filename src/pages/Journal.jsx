@@ -6,7 +6,7 @@ import usagiJournal from '../assets/12_购物的乌萨奇.jpg'
 import { getPhoto } from '../utils/photoStorage'
 
 // 单条手账卡片（异步加载照片）
-function JournalCard({ j, mealLabel }) {
+function JournalCard({ j, mealLabel, foodLogs }) {
   const [photoUrl, setPhotoUrl] = useState(null)
   useEffect(() => {
     if (j.photo) {
@@ -15,6 +15,21 @@ function JournalCard({ j, mealLabel }) {
       getPhoto(j.photoId).then(url => url && setPhotoUrl(url)).catch(() => {})
     }
   }, [j.photo, j.photoId])
+
+  // 如果手账关联了 logId，从记录中取最新菜品
+  const effectiveItems = (() => {
+    if (!j.logId) return j.items || []
+    const dayLogs = foodLogs[j.date] || []
+    const log = dayLogs.find(l => l.id === j.logId)
+    if (!log) return j.items || []
+    return log.items.map(it => ({
+      id: it.foodId || it.id,
+      name: it.name,
+      calories: it.calories,
+    }))
+  })()
+
+  const totalCals = effectiveItems.reduce((s, i) => s + (i.calories || 0), 0)
 
   return (
     <Link
@@ -39,17 +54,17 @@ function JournalCard({ j, mealLabel }) {
             </span>
           </div>
           <div className="flex flex-wrap gap-1">
-            {j.items.slice(0, 3).map((item, idx) => (
+            {effectiveItems.slice(0, 3).map((item, idx) => (
               <span key={idx} className="text-xs text-gray-600 bg-gray-50 px-2 py-0.5 rounded-full">
                 {item.name}
               </span>
             ))}
-            {j.items.length > 3 && (
-              <span className="text-xs text-gray-400">+{j.items.length - 3}</span>
+            {effectiveItems.length > 3 && (
+              <span className="text-xs text-gray-400">+{effectiveItems.length - 3}</span>
             )}
           </div>
           <div className="mt-2 text-xs text-gray-400">
-            共 {j.items.length} 道菜 · 约 {j.items.reduce((s, i) => s + (i.calories || 0), 0)} kcal
+            共 {effectiveItems.length} 道菜 · 约 {totalCals} kcal
           </div>
         </div>
       </div>
@@ -58,7 +73,7 @@ function JournalCard({ j, mealLabel }) {
 }
 
 export default function Journal() {
-  const { getAllJournals } = useStore()
+  const { getAllJournals, foodLogs } = useStore()
   const journals = getAllJournals()
 
   const grouped = useMemo(() => {
@@ -127,7 +142,7 @@ export default function Journal() {
               </div>
               <div className="space-y-3">
                 {group.items.map(j => (
-                  <JournalCard key={j.id} j={j} mealLabel={mealLabel} />
+                  <JournalCard key={j.id} j={j} mealLabel={mealLabel} foodLogs={foodLogs} />
                 ))}
               </div>
             </div>
