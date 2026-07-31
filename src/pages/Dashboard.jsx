@@ -187,7 +187,23 @@ export default function Dashboard() {
                   <div className="bg-gradient-to-br from-primary-50 to-amber-50 rounded-xl p-4 mb-3">
                     <div className="flex gap-4">
                       <div className="w-20 h-20 rounded-xl bg-white shadow-sm flex items-center justify-center text-4xl flex-shrink-0">
-                        {period === 'breakfast' ? '🥟' : period === 'lunch' ? '🍛' : period === 'dinner' ? '🍲' : '🍎'}
+                        {(() => {
+                          const mealName = meal.name || ''
+                          if (/粉|面|米粉|拌粉|河粉/.test(mealName)) return '🍜'
+                          if (/小笼包|包子|饺子|锅贴|馄饨/.test(mealName)) return '🥟'
+                          if (/粥|汤|羹/.test(mealName)) return '🍲'
+                          if (/饭|盖浇|咖喱/.test(mealName)) return '🍛'
+                          if (/沙拉|轻食|蔬菜/.test(mealName)) return '🥗'
+                          if (/饼|披萨|汉堡|三明治/.test(mealName)) return '🥪'
+                          if (/寿司|刺身|日料|日式/.test(mealName)) return '🍣'
+                          if (/火锅|麻辣|串串/.test(mealName)) return '🍲'
+                          if (/烧烤|烤肉/.test(mealName)) return '🍖'
+                          if (/水果|果切/.test(mealName)) return '🍎'
+                          if (period === 'breakfast') return '🍳'
+                          if (period === 'lunch') return '🍱'
+                          if (period === 'dinner') return '🍲'
+                          return '🍎'
+                        })()}
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-base font-bold text-gray-800 truncate">{meal.name}</p>
@@ -213,27 +229,37 @@ export default function Dashboard() {
                   {/* 食材组成 */}
                   <div className="space-y-2">
                     <p className="text-xs text-gray-500 font-medium">🍴 组成食材</p>
-                    {meal.items && meal.items.map((item, idx) => (
-                      <div key={idx} className="flex items-center gap-3 bg-gray-50 rounded-lg p-2">
-                        <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center text-xl flex-shrink-0">
-                          {item.food?.category === '主食' ? '🍚' :
-                           item.food?.category === '肉类' ? '🥩' :
-                           item.food?.category === '水产' ? '🐟' :
-                           item.food?.category === '蔬菜' ? '🥬' :
-                           item.food?.category === '蛋奶' ? '🥚' :
-                           item.food?.category === '水果' ? '🍎' :
-                           item.food?.category === '汤类' ? '🍲' :
-                           item.food?.category === '坚果' ? '🥜' : '🍽️'}
+                    {meal.items && meal.items.map((item, idx) => {
+                      // 根据食物名猜测类别选图标
+                      const name = item.name || ''
+                      const getFoodIcon = () => {
+                        if (/粉|面|米|饭|粥|饼|包|馒头|年糕/.test(name)) return '🍜'
+                        if (/肉|牛|猪|鸡|鸭|鱼|虾|蟹|贝|骨/.test(name)) return '🍖'
+                        if (/菜|瓜|茄|豆|萝|卜|笋|菇|葱|蒜|辣/.test(name)) return '🥬'
+                        if (/蛋|奶|豆浆|豆腐|酸奶|奶酪/.test(name)) return '🥚'
+                        if (/汤|羹|粥/.test(name)) return '🍲'
+                        if (/果|桃|梨|苹|蕉|橙|莓|瓜|葡萄/.test(name)) return '🍎'
+                        if (/豆|花生|核桃|杏仁|坚果/.test(name)) return '🥜'
+                        if (/水|茶|可乐|咖啡|奶茶|饮料/.test(name)) return '🥤'
+                        return '🍽️'
+                      }
+                      return (
+                        <div key={idx} className="flex items-center gap-3 bg-gray-50 hover:bg-gray-100 rounded-lg p-2 transition-colors">
+                          <div className="w-10 h-10 rounded-lg bg-white shadow-sm flex items-center justify-center text-xl flex-shrink-0">
+                            {getFoodIcon()}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-700 truncate">{name}</p>
+                            <p className="text-xs text-gray-400">
+                              {item.quantity}{item.unit || 'g'} · {item.calories || 0} kcal
+                            </p>
+                          </div>
+                          <div className="text-xs text-gray-500 text-right">
+                            <p>蛋白 {item.protein || 0}g</p>
+                          </div>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-700 truncate">{item.food?.name}</p>
-                          <p className="text-xs text-gray-400">{item.qty}g · {Math.round((item.food?.calories || 0) * item.qty / 100)} kcal</p>
-                        </div>
-                        <div className="text-xs text-gray-500 text-right">
-                          <p>蛋白 {Math.round((item.food?.protein || 0) * item.qty / 100)}g</p>
-                        </div>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
 
                   {isLateNight && calorieDeficit && (

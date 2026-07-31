@@ -42,6 +42,9 @@ const identityOptions = [
 const allergyOptions = ['花生', '海鲜', '牛奶', '鸡蛋', '小麦', '大豆', '坚果']
 const dislikeOptions = ['香菜', '苦瓜', '芹菜', '韭菜', '胡萝卜', '洋葱', '大蒜']
 
+const cuisineOptions = ['川菜', '湘菜', '赣菜', '粤菜', '东北菜', '江浙菜', '鲁菜', '闽菜', '徽菜', '浙菜']
+const tasteOptions = ['辣', '清淡', '少油', '高蛋白', '甜口', '咸香', '酸', '麻', '香煎', '煲汤', '清蒸', '凉拌']
+
 // 通用弹窗样式：屏幕正中央，避免被底部导航遮挡
 const modalOverlayClass = 'fixed inset-0 bg-black/50 z-[100] flex items-center justify-center'
 const modalContainerClass = 'w-full max-w-sm mx-4 bg-white rounded-3xl p-5 max-h-[80vh] overflow-y-auto'
@@ -61,6 +64,9 @@ export default function Profile() {
     registerAccount,
     loginAccount,
     logoutAccount,
+    favorites,
+    toggleFavoriteCuisine,
+    toggleFavoriteTaste,
   } = useStore()
 
   const [editingField, setEditingField] = useState(null) // 行内编辑（仅昵称）
@@ -77,6 +83,8 @@ export default function Profile() {
   const [showIdentityPicker, setShowIdentityPicker] = useState(false)
   const [showLoginModal, setShowLoginModal] = useState(false)
   const [showRegisterModal, setShowRegisterModal] = useState(false)
+  const [showFavCuisinePicker, setShowFavCuisinePicker] = useState(false)
+  const [showFavTastePicker, setShowFavTastePicker] = useState(false)
 
   // 账户表单
   const [loginUsername, setLoginUsername] = useState('')
@@ -364,6 +372,47 @@ export default function Profile() {
               </span>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* 我的收藏 */}
+      <div className="px-4 mt-4">
+        <div className="card">
+          <h3 className="text-sm font-semibold text-gray-700 mb-3">❤️ 我的收藏（影响推荐）</h3>
+          <div className="space-y-3">
+            <div
+              className="flex items-center justify-between bg-gray-50 rounded-xl p-3 cursor-pointer"
+              onClick={() => setShowFavCuisinePicker(true)}
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-lg">🍜</span>
+                <span className="text-sm text-gray-700">收藏菜系</span>
+              </div>
+              <span className="text-sm text-gray-500">
+                {(favorites?.cuisines || []).length > 0
+                  ? `${favorites.cuisines.join('、')} ›`
+                  : '点击添加 ›'}
+              </span>
+            </div>
+
+            <div
+              className="flex items-center justify-between bg-gray-50 rounded-xl p-3 cursor-pointer"
+              onClick={() => setShowFavTastePicker(true)}
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-lg">👅</span>
+                <span className="text-sm text-gray-700">收藏口味</span>
+              </div>
+              <span className="text-sm text-gray-500">
+                {(favorites?.tastes || []).length > 0
+                  ? `${favorites.tastes.join('、')} ›`
+                  : '点击添加 ›'}
+              </span>
+            </div>
+          </div>
+          <p className="text-xs text-gray-400 mt-3">
+            💡 收藏的菜系和口味会在推荐时优先匹配，让推荐更符合你的喜好
+          </p>
         </div>
       </div>
 
@@ -751,6 +800,72 @@ export default function Profile() {
             </div>
             <button
               onClick={() => setShowDislikePicker(false)}
+              className="w-full mt-5 bg-primary-500 text-white py-3 rounded-xl font-semibold"
+            >
+              确定
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 收藏菜系选择 */}
+      {showFavCuisinePicker && (
+        <div className={modalOverlayClass} onClick={() => setShowFavCuisinePicker(false)}>
+          <div className={modalContainerClass} onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-bold mb-4">收藏喜欢的菜系</h3>
+            <div className="flex flex-wrap gap-2">
+              {cuisineOptions.map((item) => {
+                const selected = (favorites?.cuisines || []).includes(item)
+                return (
+                  <button
+                    key={item}
+                    onClick={() => toggleFavoriteCuisine(item)}
+                    className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                      selected
+                        ? 'bg-primary-500 text-white'
+                        : 'bg-gray-100 text-gray-600'
+                    }`}
+                  >
+                    {selected && '❤️ '}{item}
+                  </button>
+                )
+              })}
+            </div>
+            <button
+              onClick={() => setShowFavCuisinePicker(false)}
+              className="w-full mt-5 bg-primary-500 text-white py-3 rounded-xl font-semibold"
+            >
+              确定
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 收藏口味选择 */}
+      {showFavTastePicker && (
+        <div className={modalOverlayClass} onClick={() => setShowFavTastePicker(false)}>
+          <div className={modalContainerClass} onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-bold mb-4">收藏喜欢的口味</h3>
+            <div className="flex flex-wrap gap-2">
+              {tasteOptions.map((item) => {
+                const selected = (favorites?.tastes || []).includes(item)
+                return (
+                  <button
+                    key={item}
+                    onClick={() => toggleFavoriteTaste(item)}
+                    className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                      selected
+                        ? 'bg-pink-500 text-white'
+                        : 'bg-gray-100 text-gray-600'
+                    }`}
+                  >
+                    {selected && '❤️ '}{item}
+                  </button>
+                )
+              })}
+            </div>
+            <button
+              onClick={() => setShowFavTastePicker(false)}
               className="w-full mt-5 bg-primary-500 text-white py-3 rounded-xl font-semibold"
             >
               确定

@@ -250,6 +250,7 @@ export const FOOD_DATABASE = [
   { id: 'congee_pork', name: '皮蛋瘦肉粥', category: '汤类', calories: 65, protein: 5.0, carbs: 10.0, fat: 1.5, fiber: 0.5, tags: ['粤菜', '养胃'], price: [8, 14] },
   { id: 'congee_fish', name: '鱼片粥', category: '汤类', calories: 55, protein: 6.0, carbs: 8.0, fat: 1.0, fiber: 0.5, tags: ['粤菜', '养胃'], price: [10, 18] },
   { id: 'lotus_root_soup', name: '莲藕排骨汤', category: '汤类', calories: 85, protein: 6.0, carbs: 10.0, fat: 2.5, fiber: 1.5, tags: ['家常菜', '滋补', '赣菜', '湘菜'], price: [18, 28] },
+  { id: 'nanchang_waguan', name: '南昌瓦罐汤', category: '汤类', calories: 60, protein: 5.0, carbs: 4.0, fat: 2.5, fiber: 0.5, tags: ['赣菜', '早餐', '养胃', '滋补', '南昌特色'], price: [6, 12] },
   { id: 'tomato_egg_soup', name: '番茄蛋汤', category: '汤类', calories: 45, protein: 3.0, carbs: 5.0, fat: 1.5, fiber: 0.5, tags: ['家常菜', '清淡', '食堂常见'], price: [4, 8] },
   { id: 'french_onion', name: '法式洋葱汤', category: '汤类', calories: 85, protein: 4.0, carbs: 10.0, fat: 3.5, fiber: 1.0, tags: ['西餐'], price: [20, 32] },
   { id: 'mushroom_cream', name: '奶油蘑菇汤', category: '汤类', calories: 110, protein: 3.5, carbs: 10.0, fat: 6.5, fiber: 1.0, tags: ['西餐'], price: [18, 28] },

@@ -36,6 +36,37 @@ const useStore = create(
 
       setActiveScene: (scene) => set({ activeScene: scene }),
 
+      // 我的收藏（食物/菜系/口味）
+      favorites: {
+        foods: [],      // 收藏的食物ID
+        cuisines: [],   // 收藏的菜系
+        tastes: [],     // 收藏的口味标签
+      },
+
+      toggleFavoriteFood: (foodId) => {
+        const { favorites } = get()
+        const foods = favorites.foods.includes(foodId)
+          ? favorites.foods.filter(id => id !== foodId)
+          : [...favorites.foods, foodId]
+        set({ favorites: { ...favorites, foods } })
+      },
+
+      toggleFavoriteCuisine: (cuisine) => {
+        const { favorites } = get()
+        const cuisines = favorites.cuisines.includes(cuisine)
+          ? favorites.cuisines.filter(c => c !== cuisine)
+          : [...favorites.cuisines, cuisine]
+        set({ favorites: { ...favorites, cuisines } })
+      },
+
+      toggleFavoriteTaste: (taste) => {
+        const { favorites } = get()
+        const tastes = favorites.tastes.includes(taste)
+          ? favorites.tastes.filter(t => t !== taste)
+          : [...favorites.tastes, taste]
+        set({ favorites: { ...favorites, tastes } })
+      },
+
       // ========== 用户档案相关 ==========
       updateProfile: (updates) => {
         const { profile } = get()
@@ -160,10 +191,17 @@ const useStore = create(
 
       // ========== 推荐相关 ==========
       generateTodayRecommendations: () => {
-        const { profile, tastePreferences, activeScene, targets } = get()
+        const { profile, tastePreferences, activeScene, targets, favorites } = get()
         const date = dayjs().format('YYYY-MM-DD')
         const dislikes = profile.restrictions.dislikes || []
         const allergies = profile.restrictions.allergies || []
+
+        // 合并口味偏好 + 收藏的口味/菜系
+        const mergedPreferences = [...new Set([
+          ...tastePreferences,
+          ...(favorites?.tastes || []),
+          ...(favorites?.cuisines || []),
+        ])]
 
         // ========== 场景强制标签（会影响权重和过滤） ==========
         const sceneBoostTags = {
@@ -186,27 +224,52 @@ const useStore = create(
         }
         const sceneTags = sceneBoostTags[activeScene] || []
 
-        // ========== 过滤不喜欢/过敏的食物 ==========
+        // ========== 过滤不喜欢/过敏/场景不合适的食物 ==========
         const isFoodOk = (food) => {
           if (dislikes.some(d => food.name.includes(d))) return false
           if (allergies.some(a => food.name.includes(a))) return false
+          const tags = food.tags || []
+
+          // 场景过滤
           if (activeScene === 'vegetarian' && food.category === '肉类') return false
-          if (activeScene === 'detox' && food.tags?.includes('高热量')) return false
-          if (activeScene === 'sick' && food.tags?.includes('油炸')) return false
+          if (activeScene === 'detox' && (tags.includes('高热量') || tags.includes('油炸'))) return false
+          if (activeScene === 'sick' && tags.includes('油炸')) return false
+
+          // 增肌日：排除油炸、高糖、纯垃圾食品
+          if (activeScene === 'gym') {
+            if (tags.includes('油炸')) return false
+            if (tags.includes('高糖')) return false
+            if (tags.includes('节日') && tags.includes('高热量')) return false
+          }
+
+          // 预算紧张：排除高价菜（单价上限 > 30元的菜）
+          if (activeScene === 'poor') {
+            if (food.price && food.price[1] > 30) return false
+            if (tags.includes('高端')) return false
+          }
+
           return true
         }
 
-        // ========== 给食物打分（综合偏好+场景） ==========
+        // ========== 给食物打分（综合偏好+场景+收藏） ==========
         const scoreFood = (food) => {
           let score = 0
           const tags = food.tags || []
-          tastePreferences.forEach(pref => {
+
+          // 收藏的食物额外大幅加分
+          if (favorites?.foods?.includes(food.id)) score += 40
+
+          // 口味/菜系偏好（使用合并后的偏好）
+          mergedPreferences.forEach(pref => {
             if (tags.includes(pref)) score += 15
           })
+
+          // 场景标签
           sceneTags.forEach(tag => {
             if (tags.includes(tag)) score += 20
           })
-          // 菜系偏好（如果用户口味里选了川菜/湘菜等，匹配菜名或标签）
+
+          // 菜系偏好匹配（收藏的菜系权重更高）
           const cuisineMap = {
             '川菜': ['川菜', '辣'],
             '湘菜': ['湘菜', '辣'],
@@ -215,13 +278,16 @@ const useStore = create(
             '江浙菜': ['江浙菜', '甜口'],
             '赣菜': ['赣菜', '辣'],
           }
-          tastePreferences.forEach(pref => {
+          mergedPreferences.forEach(pref => {
             if (cuisineMap[pref]) {
+              const isFavCuisine = favorites?.cuisines?.includes(pref)
+              const boost = isFavCuisine ? 25 : 12
               cuisineMap[pref].forEach(t => {
-                if (tags.includes(t) || food.name.includes(pref)) score += 12
+                if (tags.includes(t) || food.name.includes(pref)) score += boost
               })
             }
           })
+
           score += Math.random() * 5
           return score
         }
@@ -292,14 +358,61 @@ const useStore = create(
           }
         }
 
-        // ========== 生成各餐次 ==========
-        // 早餐：主食(1) + 蛋奶(1) + 可选小菜
-        const breakfastStaple = pickByTags(['早餐', '主食'], 1)[0] || pickByCategory('主食', 1)[0]
-        const breakfastEgg = pickByTags(['早餐'], 1, breakfastStaple ? [breakfastStaple.id] : [])[0] || pickByCategory('蛋奶', 1)[0]
-        const breakfastItems = []
-        if (breakfastStaple) breakfastItems.push({ food: breakfastStaple, qty: breakfastStaple.category === '主食' ? 150 : 100 })
-        if (breakfastEgg) breakfastItems.push({ food: breakfastEgg, qty: breakfastEgg.category === '蛋奶' ? 100 : 50 })
-        const breakfast = buildMeal(breakfastItems)
+        // ========== 生成各餐次（加入菜系特色搭配） ==========
+        // 判断当前偏好菜系
+        const preferredCuisines = mergedPreferences.filter(p => ['川菜', '湘菜', '赣菜', '粤菜', '东北菜', '江浙菜'].includes(p))
+        const hasCuisinePref = preferredCuisines.length > 0
+
+        // 早餐：菜系特色优先
+        let breakfastItems = []
+        let breakfastName = ''
+
+        if (preferredCuisines.includes('赣菜')) {
+          // 赣菜特色：南昌拌粉 + 瓦罐汤
+          const ganfen = pickByTags(['赣菜', '面食'], 1)[0] || pickByTags(['面食'], 1)[0]
+          const waguan = pickByTags(['赣菜', '汤类'], 1)[0] || pickByTags(['汤类'], 1)[0]
+          if (ganfen) breakfastItems.push({ food: ganfen, qty: 200 })
+          if (waguan) breakfastItems.push({ food: waguan, qty: 200 })
+          breakfastName = ganfen && waguan ? `${ganfen.name} + ${waguan.name}` : ''
+        } else if (preferredCuisines.includes('湘菜')) {
+          // 湘菜特色：湖南米粉 + 豆浆/蛋
+          const noodles = pickByTags(['湘菜', '面食'], 1)[0] || pickByTags(['面食'], 1)[0]
+          const soy = pickByTags(['早餐', '蛋奶'], 1)[0] || pickByCategory('蛋奶', 1)[0]
+          if (noodles) breakfastItems.push({ food: noodles, qty: 200 })
+          if (soy) breakfastItems.push({ food: soy, qty: 150 })
+          breakfastName = noodles && soy ? `${noodles.name} + ${soy.name}` : ''
+        } else if (preferredCuisines.includes('粤菜')) {
+          // 粤菜特色：粥 + 点心/肠粉
+          const congee = pickByTags(['粤菜', '汤类'], 1)[0] || pickByTags(['汤类'], 1)[0]
+          const dimsum = pickByTags(['粤菜', '早餐'], 1)[0] || pickByCategory('主食', 1)[0]
+          if (congee) breakfastItems.push({ food: congee, qty: 250 })
+          if (dimsum) breakfastItems.push({ food: dimsum, qty: 100 })
+          breakfastName = congee && dimsum ? `${congee.name} + ${dimsum.name}` : ''
+        } else if (preferredCuisines.includes('川菜')) {
+          // 川菜特色：小面 + 豆浆
+          const noodles = pickByTags(['川菜', '面食'], 1)[0] || pickByTags(['面食'], 1)[0]
+          const soy = pickByTags(['早餐', '蛋奶'], 1)[0] || pickByCategory('蛋奶', 1)[0]
+          if (noodles) breakfastItems.push({ food: noodles, qty: 200 })
+          if (soy) breakfastItems.push({ food: soy, qty: 150 })
+          breakfastName = noodles && soy ? `${noodles.name} + ${soy.name}` : ''
+        } else if (preferredCuisines.includes('东北菜')) {
+          // 东北特色：包子 + 粥/豆浆
+          const bun = pickByTags(['东北菜', '主食'], 1)[0] || pickByTags(['主食', '早餐'], 1)[0]
+          const soy = pickByTags(['早餐', '蛋奶'], 1)[0] || pickByTags(['汤类'], 1)[0]
+          if (bun) breakfastItems.push({ food: bun, qty: 150 })
+          if (soy) breakfastItems.push({ food: soy, qty: 200 })
+          breakfastName = bun && soy ? `${bun.name} + ${soy.name}` : ''
+        }
+
+        // 没有菜系偏好或没选到菜，走通用早餐逻辑
+        if (breakfastItems.length === 0) {
+          const breakfastStaple = pickByTags(['早餐', '主食'], 1)[0] || pickByCategory('主食', 1)[0]
+          const breakfastEgg = pickByTags(['早餐'], 1, breakfastStaple ? [breakfastStaple.id] : [])[0] || pickByCategory('蛋奶', 1)[0]
+          if (breakfastStaple) breakfastItems.push({ food: breakfastStaple, qty: breakfastStaple.category === '主食' ? 150 : 100 })
+          if (breakfastEgg) breakfastItems.push({ food: breakfastEgg, qty: breakfastEgg.category === '蛋奶' ? 100 : 50 })
+        }
+
+        const breakfast = buildMeal(breakfastItems, breakfastName)
 
         // 午餐：主食(1) + 主菜(1) + 配菜(1)
         const lunchStaple = pickByTags(['rice', '主食'], 1)[0] || pickByCategory('主食', 1)[0]
@@ -573,6 +686,7 @@ const useStore = create(
         foodLogs: state.foodLogs,
         bodyRecords: state.bodyRecords,
         tastePreferences: state.tastePreferences,
+        favorites: state.favorites,
       }),
     }
   )
