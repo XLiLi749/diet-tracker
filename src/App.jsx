@@ -27,6 +27,7 @@ function App() {
         <Route path="/profile" element={<Profile />} />
         <Route path="/journal" element={<Journal />} />
         <Route path="/journal/create" element={<JournalCreate />} />
+        <Route path="/journal/:id/edit" element={<JournalCreate />} />
         <Route path="/journal/:id" element={<JournalDetail />} />
       </Routes>
       <BottomNav />

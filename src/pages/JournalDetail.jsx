@@ -241,12 +241,20 @@ export default function JournalDetail() {
             ←
           </button>
           <h1 className="text-lg font-bold text-gray-800 flex-1 text-center">手账详情</h1>
-          <button
-            onClick={() => setShowDeleteConfirm(true)}
-            className="w-10 h-10 flex items-center justify-center text-red-400"
-          >
-            🗑️
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => navigate(`/journal/${id}/edit`)}
+              className="w-10 h-10 flex items-center justify-center text-primary-500"
+            >
+              ✏️
+            </button>
+            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              className="w-10 h-10 flex items-center justify-center text-red-400"
+            >
+              🗑️
+            </button>
+          </div>
         </div>
       </div>
 
@@ -325,6 +333,12 @@ export default function JournalDetail() {
         >
           + 再写一条
         </Link>
+        <button
+          onClick={() => navigate(`/journal/${id}/edit`)}
+          className="flex-1 py-3 bg-primary-100 text-primary-600 rounded-2xl font-bold"
+        >
+          ✏️ 编辑
+        </button>
         <button
           onClick={saveAsImage}
           className="flex-1 py-3 bg-gradient-to-r from-primary-500 to-primary-400 text-white rounded-2xl font-bold"

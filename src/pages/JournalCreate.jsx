@@ -1,23 +1,52 @@
-import { useState, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useRef, useEffect } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 import dayjs from 'dayjs'
 import useStore from '../store'
 import { searchFood, getFoodById, FOOD_DATABASE } from '../data/foods'
-import { compressImage, savePhoto, genPhotoId } from '../utils/photoStorage'
+import { compressImage, savePhoto, genPhotoId, getPhoto } from '../utils/photoStorage'
 
 export default function JournalCreate() {
   const navigate = useNavigate()
-  const { addJournal, getLogsByDate } = useStore()
+  const { id } = useParams()
+  const isEdit = !!id
+  const { addJournal, updateJournal, getJournalById, getLogsByDate } = useStore()
   const fileInputRef = useRef(null)
 
-  const [image, setImage] = useState(null) // { src, w, h }
-  const [items, setItems] = useState([]) // { id, name, calories, foodId }
+  const [image, setImage] = useState(null)
+  const [items, setItems] = useState([])
   const [mealType, setMealType] = useState('lunch')
   const [date, setDate] = useState(dayjs().format('YYYY-MM-DD'))
   const [note, setNote] = useState('')
   const [showFoodPicker, setShowFoodPicker] = useState(false)
   const [searchKw, setSearchKw] = useState('')
   const [showImportPanel, setShowImportPanel] = useState(false)
+  const [loaded, setLoaded] = useState(false)
+
+  // 编辑模式：加载已有手账数据
+  useEffect(() => {
+    if (!isEdit) { setLoaded(true); return }
+    const journal = getJournalById(id)
+    if (!journal) {
+      navigate('/journal')
+      return
+    }
+    setDate(journal.date)
+    setMealType(journal.mealType)
+    setNote(journal.note || '')
+    setItems(journal.items || [])
+    // 加载照片
+    if (journal.photo) {
+      setImage({ src: journal.photo })
+      setLoaded(true)
+    } else if (journal.photoId) {
+      getPhoto(journal.photoId).then(url => {
+        if (url) setImage({ src: url })
+        setLoaded(true)
+      }).catch(() => setLoaded(true))
+    } else {
+      setLoaded(true)
+    }
+  }, [id, isEdit])
 
   // 从记录导入（当天某餐）
   const importFromLog = (log) => {
@@ -92,7 +121,7 @@ export default function JournalCreate() {
     setItems(prev => prev.map(i => i.id === id ? { ...i, calories: Number(calories) || 0 } : i))
   }
 
-  // 保存手账
+  // 保存手账（新建/编辑共用）
   const saveJournal = async () => {
     let photoId = null
     if (image?.src) {
@@ -104,21 +133,26 @@ export default function JournalCreate() {
         console.error('保存照片失败:', e)
       }
     }
-    const journal = {
+    const journalData = {
       date,
       mealType,
       note,
-      photoId,
+      photoId: photoId || (isEdit ? getJournalById(id)?.photoId : null),
       items: items.map(i => ({
         id: i.id,
         name: i.name,
         calories: i.calories,
         foodId: i.foodId,
-        points: [],
+        points: i.points || [],
       })),
     }
-    const saved = addJournal(journal)
-    navigate(`/journal/${saved.id}`)
+    if (isEdit) {
+      updateJournal(id, journalData)
+      navigate(`/journal/${id}`)
+    } else {
+      const saved = addJournal(journalData)
+      navigate(`/journal/${saved.id}`)
+    }
   }
 
   const totalCalories = items.reduce((s, i) => s + i.calories, 0)
@@ -131,9 +165,16 @@ export default function JournalCreate() {
           <button onClick={() => navigate(-1)} className="w-10 h-10 flex items-center justify-center text-gray-600 text-xl">
             ←
           </button>
-          <h1 className="text-lg font-bold text-gray-800 flex-1 text-center pr-10">
-            新建手账
+          <h1 className="text-lg font-bold text-gray-800 flex-1 text-center">
+            {isEdit ? '编辑手账' : '新建手账'}
           </h1>
+          <button
+            onClick={saveJournal}
+            disabled={items.length === 0}
+            className="px-4 py-1.5 bg-gradient-to-r from-primary-500 to-primary-400 text-white rounded-full text-sm font-bold disabled:opacity-40"
+          >
+            保存
+          </button>
         </div>
       </div>
 
@@ -163,12 +204,20 @@ export default function JournalCreate() {
               <div className="rounded-2xl overflow-hidden">
                 <img src={image.src} alt="" className="w-full" />
               </div>
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className="absolute bottom-3 right-3 bg-white/90 backdrop-blur px-3 py-1.5 rounded-full text-xs font-bold text-gray-700 shadow"
-              >
-                重新上传
-              </button>
+              <div className="absolute bottom-3 right-3 flex gap-2">
+                <button
+                  onClick={() => setImage(null)}
+                  className="bg-red-500/90 backdrop-blur px-3 py-1.5 rounded-full text-xs font-bold text-white shadow"
+                >
+                  删除
+                </button>
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="bg-white/90 backdrop-blur px-3 py-1.5 rounded-full text-xs font-bold text-gray-700 shadow"
+                >
+                  重新上传
+                </button>
+              </div>
             </div>
           )}
         </div>
