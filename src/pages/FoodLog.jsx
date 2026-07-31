@@ -1,11 +1,12 @@
 import { useState, useMemo } from 'react'
-import { useSearchParams } from 'react-router-dom' 
+import { useSearchParams } from 'react-router-dom'
 import dayjs from 'dayjs'
 import useStore from '../store'
 import { FOOD_DATABASE, searchFood } from '../data/foods'
 import usagiWalk from '../assets/13_走路的乌萨奇.jpg'
 import usagiEat from '../assets/07_吃东西的乌萨奇.jpg'
 import usagiShy from '../assets/09_害羞的乌萨奇.jpg'
+import { compressImage, savePhoto, genPhotoId } from '../utils/photoStorage'
 
 const mealLabels = {
   breakfast: { icon: '🌅', label: '早餐' },
@@ -230,13 +231,21 @@ export default function FoodLog() {
         }
       })
 
-      // 自动创建手账记录
+      // 自动创建手账记录（照片先压缩存 IndexedDB，避免 localStorage 溢出）
       if (capturedPhoto && picks.length > 0) {
+        let photoId = null
+        try {
+          const compressed = await compressImage(capturedPhoto, 1280, 0.7)
+          photoId = genPhotoId()
+          await savePhoto(photoId, compressed)
+        } catch (e) {
+          console.error('保存照片失败:', e)
+        }
         addJournal({
           date: selectedDate,
           mealType: selectedMeal,
           note: '',
-          photo: capturedPhoto,
+          photoId,
           items: picks.map((p, idx) => ({
             id: p.foodId,
             name: p.name,

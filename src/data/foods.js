@@ -1,4 +1,4 @@
-// 常见食物营养数据库（每100g） 
+// 常见食物营养数据库（每100g）
 export const FOOD_DATABASE = [
   // ============== 主食类 ==============
   { id: 'rice_white', name: '米饭', category: '主食', calories: 116, protein: 2.6, carbs: 25.8, fat: 0.3, fiber: 0.4, tags: ['食堂常见', '高碳水'], price: [1, 2] },

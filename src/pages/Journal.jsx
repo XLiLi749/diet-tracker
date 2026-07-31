@@ -1,8 +1,61 @@
-import { useMemo } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import dayjs from 'dayjs'
 import useStore from '../store'
 import usagiJournal from '../assets/12_购物的乌萨奇.jpg'
+import { getPhoto } from '../utils/photoStorage'
+
+// 单条手账卡片（异步加载照片）
+function JournalCard({ j, mealLabel }) {
+  const [photoUrl, setPhotoUrl] = useState(null)
+  useEffect(() => {
+    if (j.photo) {
+      setPhotoUrl(j.photo)
+    } else if (j.photoId) {
+      getPhoto(j.photoId).then(url => url && setPhotoUrl(url)).catch(() => {})
+    }
+  }, [j.photo, j.photoId])
+
+  return (
+    <Link
+      to={`/journal/${j.id}`}
+      className="block bg-white rounded-3xl p-3 shadow-card active:scale-[0.99] transition-transform"
+    >
+      <div className="flex gap-3">
+        <div className="w-24 h-24 rounded-2xl overflow-hidden bg-gray-100 flex-shrink-0">
+          {photoUrl ? (
+            <img src={photoUrl} alt="" className="w-full h-full object-cover" />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-3xl">🍽️</div>
+          )}
+        </div>
+        <div className="flex-1 min-w-0 py-1">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-xs px-2 py-0.5 bg-usagi-pinkLight text-pink-600 rounded-full font-bold">
+              {mealLabel(j.mealType)}
+            </span>
+            <span className="text-xs text-gray-400">
+              {dayjs(j.createdAt).format('HH:mm')}
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-1">
+            {j.items.slice(0, 3).map((item, idx) => (
+              <span key={idx} className="text-xs text-gray-600 bg-gray-50 px-2 py-0.5 rounded-full">
+                {item.name}
+              </span>
+            ))}
+            {j.items.length > 3 && (
+              <span className="text-xs text-gray-400">+{j.items.length - 3}</span>
+            )}
+          </div>
+          <div className="mt-2 text-xs text-gray-400">
+            共 {j.items.length} 道菜 · 约 {j.items.reduce((s, i) => s + (i.calories || 0), 0)} kcal
+          </div>
+        </div>
+      </div>
+    </Link>
+  )
+}
 
 export default function Journal() {
   const { getAllJournals } = useStore()
@@ -74,44 +127,7 @@ export default function Journal() {
               </div>
               <div className="space-y-3">
                 {group.items.map(j => (
-                  <Link
-                    key={j.id}
-                    to={`/journal/${j.id}`}
-                    className="block bg-white rounded-3xl p-3 shadow-card active:scale-[0.99] transition-transform"
-                  >
-                    <div className="flex gap-3">
-                      <div className="w-24 h-24 rounded-2xl overflow-hidden bg-gray-100 flex-shrink-0">
-                        {j.photo ? (
-                          <img src={j.photo} alt="" className="w-full h-full object-cover" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-3xl">🍽️</div>
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0 py-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-xs px-2 py-0.5 bg-usagi-pinkLight text-pink-600 rounded-full font-bold">
-                            {mealLabel(j.mealType)}
-                          </span>
-                          <span className="text-xs text-gray-400">
-                            {dayjs(j.createdAt).format('HH:mm')}
-                          </span>
-                        </div>
-                        <div className="flex flex-wrap gap-1">
-                          {j.items.slice(0, 3).map((item, idx) => (
-                            <span key={idx} className="text-xs text-gray-600 bg-gray-50 px-2 py-0.5 rounded-full">
-                              {item.name}
-                            </span>
-                          ))}
-                          {j.items.length > 3 && (
-                            <span className="text-xs text-gray-400">+{j.items.length - 3}</span>
-                          )}
-                        </div>
-                        <div className="mt-2 text-xs text-gray-400">
-                          共 {j.items.length} 道菜 · 约 {j.items.reduce((s, i) => s + (i.calories || 0), 0)} kcal
-                        </div>
-                      </div>
-                    </div>
-                  </Link>
+                  <JournalCard key={j.id} j={j} mealLabel={mealLabel} />
                 ))}
               </div>
             </div>

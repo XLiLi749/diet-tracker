@@ -9,6 +9,7 @@ import {
   generateMockBodyRecords,
 } from '../data/mock'
 import { getFoodById, FOOD_DATABASE } from '../data/foods'
+import { deletePhoto as deletePhotoFromDB } from '../utils/photoStorage'
 
 const useStore = create(
   persist(
@@ -160,11 +161,15 @@ const useStore = create(
 
       deleteFoodLog: (date, logId) => {
         const { foodLogs } = get()
-        const dayLogs = (foodLogs[date] || []).filter(l => l.id !== logId)
+        const dayLogs = foodLogs[date] || []
+        const log = dayLogs.find(l => l.id === logId)
+        if (log?.photoId) {
+          deletePhotoFromDB(log.photoId).catch(() => {})
+        }
         set({
           foodLogs: {
             ...foodLogs,
-            [date]: dayLogs,
+            [date]: dayLogs.filter(l => l.id !== logId),
           },
         })
       },
@@ -774,6 +779,10 @@ const useStore = create(
 
       deleteJournal: (id) => {
         const { journals } = get()
+        const journal = journals.find(j => j.id === id)
+        if (journal?.photoId) {
+          deletePhotoFromDB(journal.photoId).catch(() => {})
+        }
         set({ journals: journals.filter(j => j.id !== id) })
       },
 

@@ -1,8 +1,9 @@
-import { useRef, useState } from 'react'
+import { useRef, useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import dayjs from 'dayjs'
 import useStore from '../store'
 import usagiDetail from '../assets/11_躺着的乌萨奇.jpg'
+import { getPhoto } from '../utils/photoStorage'
 
 export default function JournalDetail() {
   const { id } = useParams()
@@ -11,6 +12,19 @@ export default function JournalDetail() {
   const journal = getJournalById(id)
   const previewRef = useRef(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [photoUrl, setPhotoUrl] = useState(null)
+
+  // 从 IndexedDB 加载照片（兼容旧数据：旧版直接存 photo base64，新版存 photoId）
+  useEffect(() => {
+    if (!journal) return
+    if (journal.photo) {
+      setPhotoUrl(journal.photo)
+    } else if (journal.photoId) {
+      getPhoto(journal.photoId).then(url => {
+        if (url) setPhotoUrl(url)
+      }).catch(() => {})
+    }
+  }, [journal])
 
   if (!journal) {
     return (
@@ -50,7 +64,7 @@ export default function JournalDetail() {
 
     // 计算高度
     const headerH = 60 * scale
-    const photoH = journal.photo ? 300 * scale : 0
+    const photoH = photoUrl ? 300 * scale : 0
     const itemsH = (journal.items.length * 44 + 60) * scale
     const footerH = 50 * scale
     canvas.width = W
@@ -78,7 +92,7 @@ export default function JournalDetail() {
     currentY = headerH + 16 * scale
 
     // 照片区
-    if (journal.photo) {
+    if (photoUrl) {
       const img = new Image()
       img.crossOrigin = 'anonymous'
       img.onload = () => {
@@ -104,7 +118,7 @@ export default function JournalDetail() {
         drawItems(ctx, W, currentY + photoHActual + 24 * scale, journal, totalCalories, scale)
         downloadCanvas(canvas)
       }
-      img.src = journal.photo
+      img.src = photoUrl
     } else {
       drawItems(ctx, W, currentY, journal, totalCalories, scale)
       downloadCanvas(canvas)
@@ -224,9 +238,9 @@ export default function JournalDetail() {
       <div className="px-4 mt-4" ref={previewRef}>
         <div id="journal-card" className="bg-white rounded-3xl overflow-hidden shadow-cute">
           {/* 照片区 */}
-          {journal.photo && (
+          {photoUrl && (
             <div className="relative">
-              <img src={journal.photo} alt="" className="w-full" />
+              <img src={photoUrl} alt="" className="w-full" />
               <div className="absolute top-3 right-3 bg-white/90 backdrop-blur px-3 py-1 rounded-full text-xs font-bold text-gray-700">
                 {dayjs(journal.date).format('YYYY.MM.DD')}
               </div>

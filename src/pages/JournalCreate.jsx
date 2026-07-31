@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom' 
+import { useNavigate } from 'react-router-dom'
 import dayjs from 'dayjs'
 import useStore from '../store'
 import { searchFood, getFoodById } from '../data/foods'
+import { compressImage, savePhoto, genPhotoId } from '../utils/photoStorage'
 
 // 生成模拟的AI识别勾边结果（根据图片尺寸生成随机多边形）
 const generateMockDetections = (imgW, imgH) => {
@@ -296,12 +297,22 @@ export default function JournalCreate() {
   }
 
   // 保存手账
-  const saveJournal = () => {
+  const saveJournal = async () => {
+    let photoId = null
+    if (image?.src) {
+      try {
+        const compressed = await compressImage(image.src, 1280, 0.7)
+        photoId = genPhotoId()
+        await savePhoto(photoId, compressed)
+      } catch (e) {
+        console.error('保存照片失败:', e)
+      }
+    }
     const journal = {
       date,
       mealType,
       note,
-      photo: image?.src || null,
+      photoId,
       items: detections.map(d => ({
         id: d.id,
         name: d.name,
