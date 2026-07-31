@@ -368,6 +368,15 @@ const useStore = create(
         // 当日已用食物id，避免重复
         const usedTodayIds = new Set()
 
+        // 判断是否"汤汤水水"类食物（液体类，一餐中最多只能出现一种）
+        const isLiquidFood = (f) => {
+          if (f.category === '汤类' || f.category === '饮料') return true
+          if (f.category === '蛋奶' && /豆浆|牛奶|酸奶/.test(f.name)) return true
+          if (f.category === '主食' && /粥/.test(f.name)) return true
+          if ((f.tags || []).includes('汤类')) return true
+          return false
+        }
+
         // ========== 早餐：严格只选早餐类，清淡为主，绝对不选肉类大菜 ==========
         const isBreakfastFood = (f) => {
           const tags = f.tags || []
@@ -384,35 +393,67 @@ const useStore = create(
           if (preferredCuisines.includes('赣菜')) {
             const ganfen = candidates.find(f => f.tags?.includes('赣菜') && f.tags?.includes('面食'))
             const waguan = candidates.find(f => f.tags?.includes('赣菜') && f.tags?.includes('汤类'))
-            if (ganfen && waguan) return [{ food: ganfen, qty: 200 }, { food: waguan, qty: 200 }]
+            // 拌粉（固体）+ 瓦罐汤（液体）是可以的，但瓦罐汤+牛奶不行
+            if (ganfen) {
+              const result = [{ food: ganfen, qty: 200 }]
+              if (waguan) result.push({ food: waguan, qty: 200 })
+              return result
+            }
           }
           if (preferredCuisines.includes('湘菜')) {
             const noodles = candidates.find(f => (f.tags?.includes('湘菜') && f.tags?.includes('面食')) || f.tags?.includes('面食'))
-            const soy = candidates.find(f => f.category === '蛋奶')
-            if (noodles) return [{ food: noodles, qty: 200 }, ...(soy && soy.id !== noodles.id ? [{ food: soy, qty: 150 }] : [])]
+            const soy = candidates.find(f => f.category === '蛋奶' && (!noodles || f.id !== noodles.id))
+            if (noodles) {
+              const result = [{ food: noodles, qty: 200 }]
+              // 如果面是汤面（液体），就不要再加豆浆/牛奶了
+              if (soy && !isLiquidFood(noodles)) result.push({ food: soy, qty: 150 })
+              return result
+            }
           }
           if (preferredCuisines.includes('粤菜')) {
             const congee = candidates.find(f => f.name.includes('粥')) || candidates.find(f => f.tags?.includes('粤菜'))
             const dimsum = candidates.find(f => (f.name.includes('肠粉') || f.name.includes('烧卖') || f.tags?.includes('粤菜')) && (!congee || f.id !== congee.id))
-            if (congee) return [{ food: congee, qty: 250 }, ...(dimsum ? [{ food: dimsum, qty: 100 }] : [])]
+            if (congee) {
+              const result = [{ food: congee, qty: 250 }]
+              // 粥是液体，如果点心是固体的话可以加
+              if (dimsum && !isLiquidFood(dimsum)) result.push({ food: dimsum, qty: 100 })
+              return result
+            }
           }
           if (preferredCuisines.includes('川菜')) {
             const noodles = candidates.find(f => f.tags?.includes('川菜') && f.tags?.includes('面食')) || candidates.find(f => f.tags?.includes('面食'))
-            const soy = candidates.find(f => f.category === '蛋奶')
-            if (noodles) return [{ food: noodles, qty: 200 }, ...(soy && soy.id !== noodles.id ? [{ food: soy, qty: 150 }] : [])]
+            const soy = candidates.find(f => f.category === '蛋奶' && (!noodles || f.id !== noodles.id))
+            if (noodles) {
+              const result = [{ food: noodles, qty: 200 }]
+              if (soy && !isLiquidFood(noodles)) result.push({ food: soy, qty: 150 })
+              return result
+            }
           }
           if (preferredCuisines.includes('东北菜')) {
             const bun = candidates.find(f => f.name.includes('包')) || candidates.find(f => f.category === '主食')
             const soy = candidates.find(f => (f.category === '蛋奶' || f.name.includes('粥')) && (!bun || f.id !== bun.id))
-            if (bun) return [{ food: bun, qty: 150 }, ...(soy ? [{ food: soy, qty: 200 }] : [])]
+            if (bun) {
+              const result = [{ food: bun, qty: 150 }]
+              // 包子是固体，可以加豆浆/粥（液体）作为搭配
+              if (soy) result.push({ food: soy, qty: 200 })
+              return result
+            }
           }
-          // 通用：从高分早餐里随机选（主食+蛋奶组合）
+          // 通用：从高分早餐里随机选（主食+蛋奶组合），但禁止液体+液体
           const topCandidates = candidates.slice(0, 8)
-          const staple = topCandidates.find(f => f.category === '主食' || f.category === '汤类') || topCandidates[0]
-          const eggOrMilk = topCandidates.find(f => f.category === '蛋奶' && staple && f.id !== staple.id)
+          // 先找一个固体主食（非液体）
+          const staple = topCandidates.find(f => (f.category === '主食' || f.category === '汤类') && !isLiquidFood(f))
+            || topCandidates.find(f => f.category === '主食' || f.category === '汤类')
+            || topCandidates[0]
           const result = []
-          if (staple) result.push({ food: staple, qty: staple.category === '汤类' ? 250 : 150 })
-          if (eggOrMilk) result.push({ food: eggOrMilk, qty: 100 })
+          if (staple) {
+            result.push({ food: staple, qty: staple.category === '汤类' ? 250 : 150 })
+          }
+          // 如果主食不是液体，再加一个蛋奶/饮料作为搭配
+          if (staple && !isLiquidFood(staple)) {
+            const eggOrMilk = topCandidates.find(f => f.category === '蛋奶' && f.id !== staple.id)
+            if (eggOrMilk) result.push({ food: eggOrMilk, qty: 100 })
+          }
           return result.length > 0 ? result : (topCandidates[0] ? [{ food: topCandidates[0], qty: 150 }] : [])
         }
 

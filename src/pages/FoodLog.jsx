@@ -25,6 +25,7 @@ export default function FoodLog() {
 
   const [selectedDate, setSelectedDate] = useState(dayjs().format('YYYY-MM-DD'))
   const [showDatePicker, setShowDatePicker] = useState(false)
+  const [calendarMonth, setCalendarMonth] = useState(dayjs())
   const [showAddPanel, setShowAddPanel] = useState(false)
   const [selectedMeal, setSelectedMeal] = useState(preselectMeal || 'breakfast')
   const [searchKeyword, setSearchKeyword] = useState('')
@@ -590,34 +591,87 @@ export default function FoodLog() {
         </div>
       )}
 
-      {/* 日期选择弹窗 */}
+      {/* 日期选择弹窗（日历样式） */}
       {showDatePicker && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center" onClick={() => setShowDatePicker(false)}>
-          <div className="w-full max-w-sm mx-auto bg-white rounded-3xl mx-4 max-h-[70vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+          <div className="w-full max-w-sm mx-auto bg-white rounded-3xl mx-4 overflow-hidden" onClick={(e) => e.stopPropagation()}>
             <div className="px-5 py-4 border-b border-gray-100">
-              <h3 className="text-lg font-bold text-gray-800 text-center">选择日期</h3>
-            </div>
-            <div className="flex-1 overflow-y-auto px-3 py-2">
-              {dateOptions.map((opt) => (
+              <div className="flex items-center justify-between mb-4">
                 <button
-                  key={opt.value}
-                  onClick={() => { setSelectedDate(opt.value); setShowDatePicker(false) }}
-                  className={`w-full text-left px-4 py-3 rounded-xl mb-1 transition-colors ${
-                    selectedDate === opt.value
-                      ? 'bg-primary-50 text-primary-600 font-semibold'
-                      : 'hover:bg-gray-50 text-gray-700'
-                  }`}
+                  onClick={() => setCalendarMonth(calendarMonth.subtract(1, 'month'))}
+                  className="w-8 h-8 flex items-center justify-center text-gray-500 hover:bg-gray-100 rounded-full"
                 >
-                  {opt.label}
+                  ‹
                 </button>
-              ))}
+                <h3 className="text-lg font-bold text-gray-800">
+                  {calendarMonth.format('YYYY年MM月')}
+                </h3>
+                <button
+                  onClick={() => setCalendarMonth(calendarMonth.add(1, 'month'))}
+                  className="w-8 h-8 flex items-center justify-center text-gray-500 hover:bg-gray-100 rounded-full"
+                >
+                  ›
+                </button>
+              </div>
+              {/* 星期标题 */}
+              <div className="grid grid-cols-7 gap-1 text-center">
+                {['日', '一', '二', '三', '四', '五', '六'].map(d => (
+                  <div key={d} className="text-xs text-gray-400 py-1.5">{d}</div>
+                ))}
+              </div>
             </div>
-            <div className="px-5 py-3 border-t border-gray-100">
+            <div className="px-4 py-3">
+              <div className="grid grid-cols-7 gap-1">
+                {(() => {
+                  const startDay = calendarMonth.startOf('month').day()
+                  const daysInMonth = calendarMonth.daysInMonth()
+                  const today = dayjs().format('YYYY-MM-DD')
+                  const cells = []
+                  // 空白格
+                  for (let i = 0; i < startDay; i++) {
+                    cells.push(<div key={`empty-${i}`} className="h-10" />)
+                  }
+                  // 日期
+                  for (let d = 1; d <= daysInMonth; d++) {
+                    const dateStr = calendarMonth.date(d).format('YYYY-MM-DD')
+                    const isToday = dateStr === today
+                    const isSelected = dateStr === selectedDate
+                    const isFuture = calendarMonth.date(d).isAfter(dayjs(), 'day')
+                    cells.push(
+                      <button
+                        key={d}
+                        disabled={isFuture}
+                        onClick={() => { setSelectedDate(dateStr); setShowDatePicker(false) }}
+                        className={`h-10 rounded-full text-sm font-medium transition-colors ${
+                          isSelected
+                            ? 'bg-primary-500 text-white'
+                            : isToday
+                              ? 'bg-primary-50 text-primary-600 font-bold'
+                              : isFuture
+                                ? 'text-gray-300 cursor-not-allowed'
+                                : 'text-gray-700 hover:bg-gray-100'
+                        }`}
+                      >
+                        {d}
+                      </button>
+                    )
+                  }
+                  return cells
+                })()}
+              </div>
+            </div>
+            <div className="px-5 py-3 border-t border-gray-100 flex gap-3">
+              <button
+                onClick={() => { setSelectedDate(dayjs().format('YYYY-MM-DD')); setShowDatePicker(false) }}
+                className="flex-1 py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold"
+              >
+                回到今天
+              </button>
               <button
                 onClick={() => setShowDatePicker(false)}
-                className="w-full py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold"
+                className="flex-1 py-3 bg-primary-500 text-white rounded-xl font-semibold active:bg-primary-600"
               >
-                取消
+                关闭
               </button>
             </div>
           </div>
