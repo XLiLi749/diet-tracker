@@ -387,7 +387,7 @@ export default function JournalCreate() {
 
       {/* 步骤2：勾边编辑 */}
       {step === 2 && image && (
-        <div>
+        <div className="pb-28">
           <div className="px-4 mt-3">
             <div className="text-xs text-gray-500 mb-2 px-1">
               {isDrawing ? '✏️ 在图片上拖动绘制新选区' : '点击选区可选中编辑 · 支持新增/删除/调整'}

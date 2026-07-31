@@ -24,6 +24,7 @@ export default function FoodLog() {
     getSummaryByDate,
     addFoodLog,
     deleteFoodLog,
+    addJournal,
   } = useStore()
 
   const [selectedDate, setSelectedDate] = useState(dayjs().format('YYYY-MM-DD'))
@@ -228,6 +229,23 @@ export default function FoodLog() {
           probability: item.probability || 0,
         }
       })
+
+      // 自动创建手账记录
+      if (capturedPhoto && picks.length > 0) {
+        addJournal({
+          date: selectedDate,
+          mealType: selectedMeal,
+          note: '',
+          photo: capturedPhoto,
+          items: picks.map((p, idx) => ({
+            id: p.foodId,
+            name: p.name,
+            calories: p.calories,
+            foodId: p.foodId,
+            points: [], // 暂时没有勾边数据
+          })),
+        })
+      }
 
       setSelectedItems(picks)
       setCapturedPhoto(null)
