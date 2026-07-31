@@ -233,7 +233,7 @@ export default function JournalDetail() {
   }
 
   return (
-    <div className="pb-4">
+    <div className="pb-32">
       {/* 顶部导航 */}
       <div className="bg-white px-4 pt-4 pb-3 sticky top-0 z-20 shadow-sm">
         <div className="flex items-center">
@@ -326,7 +326,7 @@ export default function JournalDetail() {
       </div>
 
       {/* 底部操作 */}
-      <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white/95 backdrop-blur border-t border-gray-100 p-4 flex gap-3">
+      <div className="fixed bottom-20 left-0 right-0 max-w-md mx-auto bg-white/95 backdrop-blur border-t border-gray-100 p-4 flex gap-3">
         <Link
           to="/journal/create"
           className="flex-1 py-3 bg-gray-100 text-gray-700 rounded-2xl font-bold text-center"
