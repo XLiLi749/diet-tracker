@@ -480,19 +480,32 @@ export default function FoodLog() {
             {/* 搜索结果 */}
             <div className="flex-1 overflow-y-auto px-5 pb-3">
               <div className="space-y-2">
-                {searchResults.map((food) => (
+                {searchResults.map((food) => {
+                  const { qty, unit } = estimateQuantity(food)
+                  const oneServingCals = Math.round(food.calories * (qty / 100))
+                  const cuisineTag = food.tags?.find(t => ['川菜','湘菜','赣菜','粤菜','东北菜','江浙菜','鲁菜','浙菜','日料','韩餐','西餐','东南亚'].includes(t))
+                  return (
                   <button
                     key={food.id}
                     onClick={() => handleSelectFood(food)}
                     className="w-full flex items-center justify-between p-3 bg-gray-50 hover:bg-gray-100 rounded-xl transition-colors text-left"
                   >
-                    <div>
-                      <p className="text-sm font-medium text-gray-800">{food.name}</p>
-                      <p className="text-xs text-gray-400">{food.category} · {food.calories} kcal/100g</p>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-medium text-gray-800">{food.name}</p>
+                        {cuisineTag && (
+                          <span className="text-[10px] px-1.5 py-0.5 bg-primary-100 text-primary-700 rounded-full">{cuisineTag}</span>
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        一份约{qty}{unit} · <strong className="text-primary-600">{oneServingCals} kcal</strong>
+                        <span className="text-gray-400 ml-1">· 蛋白{Math.round(food.protein * (qty/100))}g</span>
+                      </p>
                     </div>
                     <span className="text-primary-500 text-lg">+</span>
                   </button>
-                ))}
+                  )
+                })}
                 {searchResults.length === 0 && (
                   <p className="text-sm text-gray-400 text-center py-8">没有找到相关食物</p>
                 )}

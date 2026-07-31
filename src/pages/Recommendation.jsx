@@ -12,20 +12,29 @@ const mealLabels = {
 }
 
 const tasteTags = [
-  { key: 'spicy', label: '🌶️ 想吃辣' },
-  { key: 'light', label: '🥬 清淡点' },
-  { key: 'noodle', label: '🍜 面食' },
-  { key: 'less_oil', label: '🥗 少油' },
-  { key: 'rice', label: '🍚 米饭' },
-  { key: 'soup', label: '🍲 汤类' },
-  { key: 'high_protein', label: '💪 高蛋白' },
-  { key: 'budget', label: '💰 省钱' },
-  { key: '川菜', label: '🔥 川菜' },
-  { key: '湘菜', label: '🌶️ 湘菜' },
-  { key: '赣菜', label: '🥘 赣菜' },
-  { key: '粤菜', label: '🦐 粤菜' },
-  { key: '东北菜', label: '🍲 东北菜' },
-  { key: '江浙菜', label: '🐟 江浙菜' },
+  { key: 'spicy', label: '🌶️ 想吃辣', group: 'taste' },
+  { key: 'light', label: '🥬 清淡点', group: 'taste' },
+  { key: 'noodle', label: '🍜 面食', group: 'taste' },
+  { key: 'less_oil', label: '🥗 少油', group: 'taste' },
+  { key: 'rice', label: '🍚 米饭', group: 'taste' },
+  { key: 'soup', label: '🍲 汤类', group: 'taste' },
+  { key: 'high_protein', label: '💪 高蛋白', group: 'taste' },
+  { key: 'budget', label: '💰 省钱', group: 'taste' },
+]
+
+const cuisineTags = [
+  { key: '川菜', label: '🔥 川菜', group: 'cuisine', heavyOil: true },
+  { key: '湘菜', label: '🌶️ 湘菜', group: 'cuisine', heavyOil: true },
+  { key: '赣菜', label: '🥘 赣菜', group: 'cuisine', heavyOil: true },
+  { key: '粤菜', label: '🦐 粤菜', group: 'cuisine', heavyOil: false },
+  { key: '东北菜', label: '🍲 东北菜', group: 'cuisine', heavyOil: false },
+  { key: '江浙菜', label: '🐟 江浙菜', group: 'cuisine', heavyOil: false },
+  { key: '鲁菜', label: '🍖 鲁菜', group: 'cuisine', heavyOil: false },
+  { key: '浙菜', label: '🍵 浙菜', group: 'cuisine', heavyOil: false },
+  { key: '日料', label: '🍣 日料', group: 'cuisine', heavyOil: false },
+  { key: '韩餐', label: '🍱 韩餐', group: 'cuisine', heavyOil: false },
+  { key: '西餐', label: '🍝 西餐', group: 'cuisine', heavyOil: false },
+  { key: '东南亚', label: '🥥 东南亚', group: 'cuisine', heavyOil: false },
 ]
 
 const specialScenes = [
@@ -144,21 +153,60 @@ export default function Recommendation() {
               className="w-full bg-gray-100 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary-300"
             />
           </div>
-          <div className="flex flex-wrap gap-2 mb-3">
-            {tasteTags.map((tag) => (
-              <button
-                key={tag.key}
-                onClick={() => toggleTag(tag.key)}
-                className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
-                  activeTags.includes(tag.key)
-                    ? 'bg-primary-500 text-white'
-                    : 'bg-gray-100 text-gray-600'
-                }`}
-              >
-                {tag.label}
-              </button>
-            ))}
+          <div className="mb-3">
+            <p className="text-xs text-gray-500 mb-2">🍽️ 口味偏好</p>
+            <div className="flex flex-wrap gap-2">
+              {tasteTags.map((tag) => (
+                <button
+                  key={tag.key}
+                  onClick={() => toggleTag(tag.key)}
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                    activeTags.includes(tag.key)
+                      ? 'bg-primary-500 text-white'
+                      : 'bg-gray-100 text-gray-600'
+                  }`}
+                >
+                  {tag.label}
+                </button>
+              ))}
+            </div>
           </div>
+          <div>
+            <p className="text-xs text-gray-500 mb-2">🌏 菜系选择（可多选）</p>
+            <div className="flex flex-wrap gap-2">
+              {cuisineTags.map((tag) => (
+                <button
+                  key={tag.key}
+                  onClick={() => toggleTag(tag.key)}
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                    activeTags.includes(tag.key)
+                      ? tag.heavyOil
+                        ? 'bg-red-500 text-white'
+                        : 'bg-primary-500 text-white'
+                      : 'bg-gray-100 text-gray-600'
+                  }`}
+                >
+                  {tag.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          {/* 重油提醒 */}
+          {activeTags.some(t => cuisineTags.find(c => c.key === t && c.heavyOil)) && (
+            <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-xl">
+              <p className="text-xs text-amber-700">
+                ⚠️ <strong>川菜/湘菜/赣菜油脂偏高</strong>，建议搭配：
+              </p>
+              <ul className="text-xs text-amber-600 mt-1 space-y-0.5 list-disc list-inside">
+                <li>选一份清淡素菜（如凉拌黄瓜、清炒时蔬）平衡</li>
+                <li>米饭可减一半量，或换杂粮饭</li>
+                <li>可沥去表面红油再吃，减少油脂摄入</li>
+              </ul>
+              <p className="text-[10px] text-amber-500 mt-1.5">
+                * 估算参考，实际受烹饪油量影响
+              </p>
+            </div>
+          )}
           {(activeTags.length > 0 || customInput) && (
             <button
               onClick={handleApplyTaste}
