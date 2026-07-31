@@ -130,30 +130,32 @@ export default function Stats() {
 
   return (
     <div className="pb-4">
-      {/* 顶部 */}
-      <div className="bg-gradient-to-r from-blue-500 to-primary-400 text-white px-5 pt-12 pb-8 rounded-b-3xl">
-        <h1 className="text-xl font-bold">📊 数据统计</h1>
-        <div className="flex gap-2 mt-4 flex-wrap">
+      {/* 顶部 - 乌萨奇可爱风格 */}
+      <div className="bg-gradient-to-br from-usagi-skyLight via-usagi-cream to-usagi-mintLight px-5 pt-12 pb-10 rounded-b-[2.5rem] relative overflow-hidden">
+        <div className="absolute -right-8 -top-8 w-28 h-28 rounded-full bg-white/40" />
+        <div className="absolute left-12 bottom-4 w-3 h-3 rounded-full bg-white/60" />
+        <h1 className="text-xl font-bold text-gray-800 relative z-10">📊 数据统计</h1>
+        <div className="flex gap-2 mt-4 flex-wrap relative z-10">
           <button
             onClick={() => setTimeRange('week')}
-            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
-              timeRange === 'week' ? 'bg-white text-blue-600' : 'bg-white/20 text-white'
+            className={`px-4 py-1.5 rounded-full text-sm font-bold transition-all ${
+              timeRange === 'week' ? 'bg-white text-primary-600 shadow-sm scale-105' : 'bg-white/60 text-gray-600'
             }`}
           >
             本周
           </button>
           <button
             onClick={() => setTimeRange('month')}
-            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
-              timeRange === 'month' ? 'bg-white text-blue-600' : 'bg-white/20 text-white'
+            className={`px-4 py-1.5 rounded-full text-sm font-bold transition-all ${
+              timeRange === 'month' ? 'bg-white text-primary-600 shadow-sm scale-105' : 'bg-white/60 text-gray-600'
             }`}
           >
             本月
           </button>
           <button
             onClick={() => setShowCustomPicker(true)}
-            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
-              timeRange === 'custom' ? 'bg-white text-blue-600' : 'bg-white/20 text-white'
+            className={`px-4 py-1.5 rounded-full text-sm font-bold transition-all ${
+              timeRange === 'custom' ? 'bg-white text-primary-600 shadow-sm scale-105' : 'bg-white/60 text-gray-600'
             }`}
           >
             {timeRange === 'custom' ? `${customStart.slice(5)} ~ ${customEnd.slice(5)}` : '自定义'}

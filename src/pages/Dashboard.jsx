@@ -51,33 +51,38 @@ export default function Dashboard() {
 
   return (
     <div className="pb-4">
-      {/* 顶部问候栏 */}
-      <div className="bg-gradient-to-r from-primary-500 to-primary-400 text-white px-5 pt-12 pb-8 rounded-b-3xl">
-        <div className="flex items-center justify-between mb-4">
+      {/* 顶部问候栏 - 乌萨奇可爱风格 */}
+      <div className="bg-gradient-to-br from-usagi-yellow via-usagi-cream to-usagi-pinkLight px-5 pt-12 pb-10 rounded-b-[2.5rem] relative overflow-hidden">
+        {/* 装饰圆点 */}
+        <div className="absolute -right-8 -top-8 w-32 h-32 rounded-full bg-white/30" />
+        <div className="absolute right-16 top-4 w-4 h-4 rounded-full bg-white/50" />
+        <div className="absolute -left-4 bottom-4 w-20 h-20 rounded-full bg-white/20" />
+
+        <div className="flex items-center justify-between mb-5 relative z-10">
           <div>
-            <h1 className="text-xl font-bold">{greeting()}，{profile.nickname}</h1>
-            <p className="text-sm opacity-80 mt-1">今天也要好好吃饭哦 💪</p>
+            <h1 className="text-xl font-bold text-gray-800">{greeting()}，{profile.nickname}</h1>
+            <p className="text-sm text-gray-600 mt-1">今天也要好好吃饭哦 🍞</p>
           </div>
-          <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center text-2xl">
-            👋
+          <div className="w-14 h-14 rounded-full bg-white shadow-cute flex items-center justify-center text-3xl">
+            🐰
           </div>
         </div>
 
-        {/* 今日热量进度 */}
-        <div className="bg-white/15 backdrop-blur rounded-2xl p-4">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm opacity-90">今日热量摄入</span>
-            <span className="text-sm font-bold">{summary.caloriePct}%</span>
+        {/* 今日热量进度 - 可爱卡片 */}
+        <div className="bg-white/85 backdrop-blur rounded-3xl p-5 shadow-cute relative z-10">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-sm text-gray-600 font-medium">🍞 今日热量摄入</span>
+            <span className="text-sm font-bold text-primary-600 bg-primary-50 px-3 py-1 rounded-full">{summary.caloriePct}%</span>
           </div>
-          <div className="w-full h-3 bg-white/25 rounded-full overflow-hidden">
+          <div className="w-full h-4 bg-gray-100 rounded-full overflow-hidden">
             <div
-              className="h-full bg-white rounded-full transition-all duration-500"
+              className="h-full bg-gradient-to-r from-usagi-yellow to-primary-500 rounded-full transition-all duration-500"
               style={{ width: `${summary.caloriePct}%` }}
             />
           </div>
-          <div className="flex items-center justify-between mt-2 text-sm">
-            <span>{summary.calories} kcal</span>
-            <span className="opacity-75">目标 {targets.calorieTarget} kcal</span>
+          <div className="flex items-center justify-between mt-3 text-sm">
+            <span className="font-bold text-gray-700">{summary.calories} kcal</span>
+            <span className="text-gray-500">目标 {targets.calorieTarget} kcal</span>
           </div>
         </div>
       </div>
@@ -109,23 +114,23 @@ export default function Dashboard() {
 
       {/* 快捷记录 */}
       <div className="px-4 mt-4">
-        <div className="card">
-          <h3 className="text-sm font-semibold text-gray-700 mb-3">📸 快捷记录</h3>
+        <div className="card rounded-3xl">
+          <h3 className="text-sm font-bold text-gray-700 mb-3">📸 快捷记录</h3>
           <div className="grid grid-cols-4 gap-2">
             {Object.entries(mealLabels).map(([key, meal]) => (
               <Link
                 key={key}
                 to={`/log?meal=${key}`}
-                className={`flex flex-col items-center p-3 rounded-xl transition-colors ${
+                className={`flex flex-col items-center p-3 rounded-2xl transition-all active:scale-95 ${
                   loggedMeals.has(key)
-                    ? 'bg-primary-50 border border-primary-200'
-                    : 'bg-gray-50 hover:bg-gray-100'
+                    ? 'bg-gradient-to-br from-usagi-mintLight to-usagi-mint/30 border-2 border-usagi-mint'
+                    : 'bg-gray-50 hover:bg-usagi-cream/50'
                 }`}
               >
                 <span className="text-2xl mb-1">{meal.icon}</span>
-                <span className="text-xs font-medium text-gray-700">{meal.label}</span>
+                <span className="text-xs font-semibold text-gray-700">{meal.label}</span>
                 {loggedMeals.has(key) && (
-                  <span className="text-[10px] text-primary-600 mt-0.5">已记录 ✓</span>
+                  <span className="text-[10px] text-green-600 mt-0.5 font-bold">已记 ✓</span>
                 )}
               </Link>
             ))}
@@ -175,16 +180,16 @@ export default function Dashboard() {
 
               {/* 深夜场景：达标显示鼓励，未达标显示加餐 */}
               {isLateNight && isOnTrack ? (
-                <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-5 text-center">
-                  <div className="text-4xl mb-3">🎉</div>
-                  <p className="text-base font-medium text-green-700 mb-2">今日目标已达成！</p>
+                <div className="bg-gradient-to-br from-usagi-mintLight to-usagi-skyLight rounded-2xl p-5 text-center">
+                  <div className="text-5xl mb-3">🎉🐰</div>
+                  <p className="text-base font-bold text-green-700 mb-2">今日目标已达成！</p>
                   <p className="text-sm text-green-600">{encouragement}</p>
-                  <p className="text-xs text-green-500 mt-3">已摄入 {summary.calories} / {targets.calorieTarget} kcal</p>
+                  <p className="text-xs text-green-500 mt-3 bg-white/50 rounded-full px-3 py-1 inline-block">已摄入 {summary.calories} / {targets.calorieTarget} kcal</p>
                 </div>
               ) : meal ? (
                 <div>
-                  {/* 主推荐大卡片 */}
-                  <div className="bg-gradient-to-br from-primary-50 to-amber-50 rounded-xl p-4 mb-3">
+                  {/* 主推荐大卡片 - 可爱风格 */}
+                  <div className="bg-gradient-to-br from-usagi-cream via-usagi-pinkLight to-usagi-skyLight rounded-2xl p-4 mb-3">
                     <div className="flex gap-4">
                       <div className="w-20 h-20 rounded-xl bg-white shadow-sm flex items-center justify-center text-4xl flex-shrink-0">
                         {(() => {
@@ -208,11 +213,11 @@ export default function Dashboard() {
                       <div className="flex-1 min-w-0">
                         <p className="text-base font-bold text-gray-800 truncate">{meal.name}</p>
                         <div className="flex items-center gap-2 mt-1">
-                          <span className="text-xs px-2 py-0.5 bg-primary-100 text-primary-700 rounded-full font-medium">
+                          <span className="text-xs px-3 py-1 bg-white/80 text-primary-700 rounded-full font-bold shadow-sm">
                             {meal.totalNutrition.calories} kcal
                           </span>
                           {isLateNight && calorieDeficit && (
-                            <span className="text-xs px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full">
+                            <span className="text-xs px-3 py-1 bg-usagi-pinkLight text-pink-600 rounded-full font-bold">
                               适合加餐
                             </span>
                           )}

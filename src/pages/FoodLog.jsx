@@ -246,15 +246,16 @@ export default function FoodLog() {
 
   return (
     <div className="pb-4">
-      {/* 顶部导航 */}
-      <div className="bg-white px-4 pt-4 pb-3 sticky top-0 z-10 shadow-sm">
-        <div className="flex items-center justify-between mb-3">
+      {/* 顶部导航 - 乌萨奇可爱风格 */}
+      <div className="bg-gradient-to-br from-usagi-mintLight via-usagi-cream to-usagi-pinkLight px-5 pt-12 pb-6 rounded-b-[2rem] relative overflow-hidden">
+        <div className="absolute -right-4 top-8 w-16 h-16 rounded-full bg-white/40" />
+        <div className="flex items-center justify-between relative z-10">
           <h1 className="text-lg font-bold text-gray-800">📸 饮食记录</h1>
           <button
             onClick={() => setShowDatePicker(true)}
-            className="flex items-center gap-1 bg-gray-100 rounded-full px-3 py-1.5 active:bg-gray-200"
+            className="flex items-center gap-1 bg-white/80 backdrop-blur rounded-full px-4 py-2 active:bg-white shadow-sm"
           >
-            <span className="text-sm font-medium text-gray-700 min-w-[80px] text-center">
+            <span className="text-sm font-bold text-gray-700 min-w-[80px] text-center">
               {isToday ? '今天' : selectedDate}
             </span>
             <span className="text-gray-500 text-xs">▼</span>
@@ -267,18 +268,18 @@ export default function FoodLog() {
         <div className="grid grid-cols-2 gap-3">
           <button
             onClick={() => setShowAiPanel(true)}
-            className="bg-gradient-to-br from-primary-500 to-primary-600 text-white rounded-2xl p-4 text-left shadow-card active:scale-[0.98] transition-transform"
+            className="bg-gradient-to-br from-usagi-yellow to-primary-400 text-white rounded-3xl p-4 text-left shadow-cute active:scale-[0.98] transition-transform"
           >
             <div className="text-2xl mb-2">📷</div>
-            <div className="font-semibold">拍照识别</div>
-            <div className="text-xs opacity-80 mt-0.5">AI自动识别食物</div>
+            <div className="font-bold">拍照识别</div>
+            <div className="text-xs opacity-90 mt-0.5">AI自动识别食物</div>
           </button>
           <button
             onClick={() => setShowAddPanel(true)}
-            className="bg-white text-gray-800 rounded-2xl p-4 text-left shadow-card active:scale-[0.98] transition-transform border border-gray-100"
+            className="bg-white text-gray-800 rounded-3xl p-4 text-left shadow-cute active:scale-[0.98] transition-transform border border-usagi-pinkLight"
           >
             <div className="text-2xl mb-2">✏️</div>
-            <div className="font-semibold">手动添加</div>
+            <div className="font-bold">手动添加</div>
             <div className="text-xs text-gray-500 mt-0.5">从食物库选择</div>
           </button>
         </div>

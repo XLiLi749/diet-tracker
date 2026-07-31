@@ -112,10 +112,12 @@ export default function Recommendation() {
 
   return (
     <div className="pb-4">
-      {/* 顶部 */}
-      <div className="bg-gradient-to-r from-accent-500 to-primary-400 text-white px-5 pt-12 pb-8 rounded-b-3xl">
-        <h1 className="text-xl font-bold">🍽️ 智能推荐</h1>
-        <p className="text-sm opacity-80 mt-1">
+      {/* 顶部 - 乌萨奇可爱风格 */}
+      <div className="bg-gradient-to-br from-usagi-pinkLight via-usagi-cream to-usagi-mintLight px-5 pt-12 pb-10 rounded-b-[2.5rem] relative overflow-hidden">
+        <div className="absolute -right-6 -top-6 w-24 h-24 rounded-full bg-white/40" />
+        <div className="absolute left-8 bottom-2 w-3 h-3 rounded-full bg-white/60" />
+        <h1 className="text-xl font-bold text-gray-800 relative z-10">🍽️ 智能推荐</h1>
+        <p className="text-sm text-gray-600 mt-1 relative z-10">
           基于你的身体数据和饮食目标，为你定制今日食谱
         </p>
       </div>

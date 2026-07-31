@@ -192,12 +192,14 @@ export default function Profile() {
 
   return (
     <div className="pb-4">
-      {/* 顶部 */}
-      <div className="bg-gradient-to-br from-purple-500 to-primary-400 text-white px-5 pt-12 pb-8 rounded-b-3xl">
-        <h1 className="text-xl font-bold">👤 我的</h1>
-        <div className="flex items-center gap-4 mt-5">
+      {/* 顶部 - 乌萨奇可爱风格 */}
+      <div className="bg-gradient-to-br from-usagi-pinkLight via-usagi-cream to-usagi-yellow/50 px-5 pt-12 pb-10 rounded-b-[2.5rem] relative overflow-hidden">
+        <div className="absolute -right-6 -top-6 w-28 h-28 rounded-full bg-white/40" />
+        <div className="absolute left-16 bottom-6 w-3 h-3 rounded-full bg-white/60" />
+        <h1 className="text-xl font-bold text-gray-800 relative z-10">👤 我的</h1>
+        <div className="flex items-center gap-4 mt-5 relative z-10">
           <div
-            className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center text-3xl cursor-pointer"
+            className="w-16 h-16 rounded-full bg-white shadow-cute flex items-center justify-center text-3xl cursor-pointer"
             onClick={() => setShowGenderPicker(true)}
           >
             {genderIcon}
