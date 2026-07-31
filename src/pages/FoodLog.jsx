@@ -7,6 +7,7 @@ import usagiWalk from '../assets/13_走路的乌萨奇.jpg'
 import usagiEat from '../assets/07_吃东西的乌萨奇.jpg'
 import usagiShy from '../assets/09_害羞的乌萨奇.jpg'
 import { compressImage, savePhoto, genPhotoId } from '../utils/photoStorage'
+import { getCaloriesInfo, estimateQuantity, OIL_LABELS } from '../utils/calories'
 
 const mealLabels = {
   breakfast: { icon: '🌅', label: '早餐' },
@@ -71,74 +72,22 @@ export default function FoodLog() {
     return groups
   }, [logs])
 
-  // 智能估算食物分量（基于食物名称和类别）
-  const estimateQuantity = (food) => {
-    const name = food.name || ''
-    const category = food.category || ''
-    // 先按名称匹配典型分量
-    const namePatterns = [
-      { p: /米饭|白饭|大米/, qty: 150 },
-      { p: /面条|拉面|刀削|炸酱面|小面|担担|臊子面|米线|米粉|河粉/, qty: 200 },
-      { p: /炒饭|炒面/, qty: 200 },
-      { p: /包子|肉包|菜包|馒头/, qty: 100 },
-      { p: /饺子|馄饨|云吞/, qty: 150 },
-      { p: /小笼包|汤包/, qty: 120 },
-      { p: /粥/, qty: 300, unit: 'ml' },
-      { p: /豆浆|牛奶|酸奶/, qty: 250, unit: 'ml' },
-      { p: /咖啡|奶茶|果汁|可乐|汽水|茶/, qty: 350, unit: 'ml' },
-      { p: /鸡蛋|水煮蛋|煎蛋|蒸蛋/, qty: 50 },
-      { p: /鸡腿|鸡翅|鸡胸|鸡排/, qty: 120 },
-      { p: /红烧肉|东坡肉|回锅肉|小炒肉|锅包肉|扣肉|肥牛|肥羊|猪排|牛排/, qty: 120 },
-      { p: /宫保鸡丁|鱼香肉丝|京酱肉丝|青椒肉丝/, qty: 120 },
-      { p: /白切鸡|盐焗鸡|烧鸡|烤鸭/, qty: 150 },
-      { p: /鱼|虾|蟹|海鲜/, qty: 120 },
-      { p: /豆腐|麻婆豆腐|家常豆腐|豆干/, qty: 150 },
-      { p: /西兰花|青菜|白菜|菠菜|生菜|油麦菜|空心菜|韭菜|芹菜|黄瓜|番茄|西红柿|土豆丝|藕片|地三鲜/, qty: 100 },
-      { p: /麻辣烫|火锅|冒菜/, qty: 250 },
-      { p: /面包|吐司|三明治|汉堡/, qty: 100 },
-      { p: /披萨|意面|肉酱面/, qty: 200 },
-      { p: /寿司|盖饭|牛丼|石锅拌饭|咖喱饭|海南鸡饭/, qty: 250 },
-      { p: /紫菜包饭|饭团|手卷/, qty: 150 },
-      { p: /苹果|香蕉|橙子|橘子|梨|桃|芒果|猕猴桃|火龙果|西瓜|葡萄|草莓|蓝莓|西柚/, qty: 150 },
-      { p: /关东煮|章鱼小丸子|章鱼烧/, qty: 100 },
-      { p: /蛋挞|蛋糕|冰淇淋|巧克力/, qty: 60 },
-      { p: /红薯|玉米|紫薯/, qty: 150 },
-      { p: /麻辣烫|螺蛳粉|酸辣粉/, qty: 300 },
-      { p: /沙拉/, qty: 150 },
-    ]
-    for (const { p, qty, unit } of namePatterns) {
-      if (p.test(name)) {
-        return { qty, unit: unit || 'g' }
-      }
-    }
-    // 按类别匹配
-    if (category.includes('汤') || category.includes('粥') || category.includes('饮料')) {
-      return { qty: 250, unit: 'ml' }
-    }
-    if (category.includes('主食')) {
-      return { qty: 150, unit: 'g' }
-    }
-    if (category.includes('肉') || category.includes('水产')) {
-      return { qty: 100, unit: 'g' }
-    }
-    if (category.includes('蔬菜')) {
-      return { qty: 100, unit: 'g' }
-    }
-    if (category.includes('水果')) {
-      return { qty: 150, unit: 'g' }
-    }
-    return { qty: 100, unit: 'g' }
-  }
-
   const handleSelectFood = (food) => {
     const { qty, unit } = estimateQuantity(food)
+    const calInfo = getCaloriesInfo(food, qty)
     const factor = qty / 100
+    // 默认不喝汤（中油以上的菜），清淡菜默认喝汤
+    const defaultEatSoup = ['light', 'none'].includes(calInfo.oilLevel)
     const newItem = {
       foodId: food.id,
       name: food.name,
       quantity: qty,
       unit,
-      calories: Math.round(food.calories * factor),
+      caloriesNoSoup: calInfo.caloriesNoSoup,
+      caloriesWithSoup: calInfo.caloriesWithSoup,
+      calories: defaultEatSoup ? calInfo.caloriesWithSoup : calInfo.caloriesNoSoup,
+      eatSoup: defaultEatSoup,
+      oilLevel: calInfo.oilLevel,
       protein: Math.round(food.protein * factor * 10) / 10,
       carbs: Math.round(food.carbs * factor * 10) / 10,
       fat: Math.round(food.fat * factor * 10) / 10,
@@ -150,15 +99,32 @@ export default function FoodLog() {
     setSelectedItems(selectedItems.filter((_, i) => i !== index))
   }
 
+  // 切换是否喝汤
+  const toggleEatSoup = (index) => {
+    const updated = [...selectedItems]
+    const item = updated[index]
+    const newEatSoup = !item.eatSoup
+    updated[index] = {
+      ...item,
+      eatSoup: newEatSoup,
+      calories: newEatSoup ? item.caloriesWithSoup : item.caloriesNoSoup,
+    }
+    setSelectedItems(updated)
+  }
+
   const handleUpdateQty = (index, qty) => {
     const food = FOOD_DATABASE.find(f => f.id === selectedItems[index].foodId)
     if (!food) return
+    const calInfo = getCaloriesInfo(food, qty)
     const factor = qty / 100
     const updated = [...selectedItems]
+    const prevEatSoup = updated[index].eatSoup
     updated[index] = {
       ...updated[index],
       quantity: qty,
-      calories: Math.round(food.calories * factor),
+      caloriesNoSoup: calInfo.caloriesNoSoup,
+      caloriesWithSoup: calInfo.caloriesWithSoup,
+      calories: prevEatSoup ? calInfo.caloriesWithSoup : calInfo.caloriesNoSoup,
       protein: Math.round(food.protein * factor * 10) / 10,
       carbs: Math.round(food.carbs * factor * 10) / 10,
       fat: Math.round(food.fat * factor * 10) / 10,
@@ -453,20 +419,41 @@ export default function FoodLog() {
                     确认添加 →
                   </button>
                 </div>
-                <p className="text-[10px] text-primary-500 mb-2">💡 可修改克数，或点右边 × 删除不需要的</p>
+                <p className="text-[10px] text-primary-500 mb-2">💡 可修改克数，切换是否喝汤，或点 × 删除</p>
                 <div className="space-y-2 max-h-[30vh] overflow-y-auto">
                   {selectedItems.map((item, idx) => (
-                    <div key={idx} className="flex items-center gap-2 bg-white rounded-lg p-2">
-                      <span className="text-sm flex-1">{item.name}</span>
-                      <input
-                        type="number"
-                        value={item.quantity}
-                        onChange={(e) => handleUpdateQty(idx, Number(e.target.value) || 0)}
-                        className="w-16 text-center text-sm border border-gray-200 rounded py-1"
-                      />
-                      <span className="text-xs text-gray-400">{item.unit}</span>
-                      <span className="text-xs text-gray-500 w-14 text-right">{item.calories}kcal</span>
-                      <button onClick={() => handleRemoveItem(idx)} className="text-red-400 text-lg">×</button>
+                    <div key={idx} className="bg-white rounded-lg p-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm flex-1 font-medium text-gray-700">{item.name}</span>
+                        <span className="text-xs text-primary-600 font-bold">{item.calories}kcal</span>
+                        <button onClick={() => handleRemoveItem(idx)} className="text-red-400 text-lg w-6 h-6 flex items-center justify-center">×</button>
+                      </div>
+                      <div className="flex items-center gap-2 mt-1.5">
+                        <input
+                          type="number"
+                          value={item.quantity}
+                          onChange={(e) => handleUpdateQty(idx, Number(e.target.value) || 0)}
+                          className="w-16 text-center text-xs border border-gray-200 rounded py-1"
+                        />
+                        <span className="text-xs text-gray-400">{item.unit}</span>
+                        {item.caloriesWithSoup && item.caloriesWithSoup > item.caloriesNoSoup && (
+                          <button
+                            onClick={() => toggleEatSoup(idx)}
+                            className={`ml-auto text-[10px] px-2 py-1 rounded-full font-bold ${
+                              item.eatSoup
+                                ? 'bg-red-100 text-red-600'
+                                : 'bg-green-100 text-green-600'
+                            }`}
+                          >
+                            {item.eatSoup ? '🍲 连汤喝' : '🥗 不喝汤'}
+                          </button>
+                        )}
+                      </div>
+                      {item.caloriesWithSoup && item.caloriesWithSoup > item.caloriesNoSoup && (
+                        <p className="text-[10px] text-gray-400 mt-1">
+                          不喝汤 {item.caloriesNoSoup}kcal · 连汤喝 {item.caloriesWithSoup}kcal（+{item.caloriesWithSoup - item.caloriesNoSoup}）
+                        </p>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -492,7 +479,7 @@ export default function FoodLog() {
               <div className="space-y-2">
                 {searchResults.map((food) => {
                   const { qty, unit } = estimateQuantity(food)
-                  const oneServingCals = Math.round(food.calories * (qty / 100))
+                  const calInfo = getCaloriesInfo(food, qty)
                   const cuisineTag = food.tags?.find(t => ['川菜','湘菜','赣菜','粤菜','东北菜','江浙菜','鲁菜','浙菜','日料','韩餐','西餐','东南亚'].includes(t))
                   return (
                   <button
@@ -500,19 +487,36 @@ export default function FoodLog() {
                     onClick={() => handleSelectFood(food)}
                     className="w-full flex items-center justify-between p-3 bg-gray-50 hover:bg-gray-100 rounded-xl transition-colors text-left"
                   >
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <p className="text-sm font-medium text-gray-800">{food.name}</p>
                         {cuisineTag && (
-                          <span className="text-[10px] px-1.5 py-0.5 bg-primary-100 text-primary-700 rounded-full">{cuisineTag}</span>
+                          <span className="text-[10px] px-1.5 py-0.5 bg-primary-100 text-primary-700 rounded-full flex-shrink-0">{cuisineTag}</span>
+                        )}
+                        {calInfo.oilLevel !== 'none' && (
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0 ${calInfo.oilColor}`}>
+                            {calInfo.oilEmoji} {calInfo.oilLabel}
+                          </span>
                         )}
                       </div>
-                      <p className="text-xs text-gray-500 mt-0.5">
-                        一份约{qty}{unit} · <strong className="text-primary-600">{oneServingCals} kcal</strong>
+                      <div className="text-xs text-gray-500 mt-1">
+                        <span>一份约{qty}{unit}</span>
+                        <span className="mx-1">·</span>
+                        <span className="text-primary-600 font-semibold">
+                          {calInfo.caloriesNoSoup}
+                          {calInfo.caloriesWithSoup > calInfo.caloriesNoSoup && (
+                            <span className="text-gray-400 font-normal">~{calInfo.caloriesWithSoup}</span>
+                          )} kcal
+                        </span>
                         <span className="text-gray-400 ml-1">· 蛋白{Math.round(food.protein * (qty/100))}g</span>
-                      </p>
+                      </div>
+                      {calInfo.soupCalories > 0 && (
+                        <p className="text-[10px] text-amber-600 mt-0.5">
+                          汤汁/红油约 +{calInfo.soupCalories} kcal，{calInfo.oilLevel === 'extreme' || calInfo.oilLevel === 'soup' ? '⚠️ 建议不喝汤' : '不喝汤更清爽'}
+                        </p>
+                      )}
                     </div>
-                    <span className="text-primary-500 text-lg">+</span>
+                    <span className="text-primary-500 text-lg flex-shrink-0 ml-2">+</span>
                   </button>
                   )
                 })}
