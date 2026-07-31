@@ -25,7 +25,8 @@ export const DEFAULT_PROFILE = {
 
   dietGoal: {
     type: 'fat_loss',
-    targetWeight: 62.1, // 身高175时BMI 22的理想体重
+    targetWeight: 62.1,
+    rateLevel: 'gentle',
     startDate: '2026-06-01',
     expectedDurationMonths: 3,
   },
@@ -116,32 +117,76 @@ const ACTIVITY_FACTOR = {
   daily: 1.9,
 }
 
-// 计算每日营养目标
+// 速率档位配置
+export const RATE_LEVELS = {
+  gentle: {
+    key: 'gentle',
+    label: '温和健康档',
+    desc: '适合新手、学生党、肠胃偏弱人群',
+    fatLossDeficit: 300,
+    weightGainSurplus: 300,
+    monthlyChangeKg: '1~1.5',
+  },
+  standard: {
+    key: 'standard',
+    label: '标准高效档',
+    desc: '适合有一定基础、作息饮食规律人群',
+    fatLossDeficit: 500,
+    weightGainSurplus: 500,
+    monthlyChangeKg: '1.5~2',
+  },
+}
+
+// 最低摄入红线（kcal）
+const MIN_INTAKE = {
+  male: 1500,
+  female: 1200,
+}
+
+// 单日最大缺口/盈余限制（kcal）
+const MAX_DEFICIT = 700
+const MAX_SURPLUS = 700
+
+// 计算每日营养目标（严格遵循健康速率标准）
 export const calcDailyTargets = (profile) => {
   const { gender, weight, height, age, dietGoal, lifestyle } = profile
   const bmr = calcBMR(gender, weight, height, age)
   const tdee = bmr * (ACTIVITY_FACTOR[lifestyle.exerciseFrequency] || 1.375)
 
+  // 获取速率档位（BMI偏低时自动用温和档）
+  const currentBMI = parseFloat(calcBMI(weight, height))
+  let rateLevel = dietGoal.rateLevel || 'gentle'
+  if (dietGoal.type === 'weight_gain' && currentBMI < 18.5) {
+    rateLevel = 'gentle'
+  }
+  const rate = RATE_LEVELS[rateLevel] || RATE_LEVELS.gentle
+
   let calorieTarget, proteinPerKg, carbsPct, fatPct
   switch (dietGoal.type) {
-    case 'fat_loss':
-      calorieTarget = Math.round(tdee - 300)
+    case 'fat_loss': {
+      const deficit = Math.min(rate.fatLossDeficit, MAX_DEFICIT)
+      calorieTarget = Math.round(tdee - deficit)
       proteinPerKg = 1.8
       carbsPct = 0.40
       fatPct = 0.25
       break
-    case 'weight_gain':
-      calorieTarget = Math.round(tdee + 500)
+    }
+    case 'weight_gain': {
+      const surplus = Math.min(rate.weightGainSurplus, MAX_SURPLUS)
+      calorieTarget = Math.round(tdee + surplus)
       proteinPerKg = 1.6
       carbsPct = 0.55
       fatPct = 0.25
       break
-    case 'muscle_gain':
-      calorieTarget = Math.round(tdee + 300)
+    }
+    case 'muscle_gain': {
+      const surplus = Math.min(rate.weightGainSurplus, MAX_SURPLUS)
+      calorieTarget = Math.round(tdee + surplus)
       proteinPerKg = 2.0
       carbsPct = 0.50
       fatPct = 0.25
       break
+    }
     case 'stomach_care':
       calorieTarget = Math.round(tdee - 100)
       proteinPerKg = 1.2
@@ -155,6 +200,12 @@ export const calcDailyTargets = (profile) => {
       fatPct = 0.30
   }
 
+  // 最低摄入红线约束：不得低于BMR，不得低于性别最低值
+  const minIntake = Math.max(bmr, MIN_INTAKE[gender] || 1200)
+  if (calorieTarget < minIntake) {
+    calorieTarget = minIntake
+  }
+
   const proteinTarget = Math.round(weight * proteinPerKg)
   const fatTarget = Math.round((calorieTarget * fatPct) / 9)
   const carbsTarget = Math.round((calorieTarget * carbsPct) / 4)
@@ -166,6 +217,10 @@ export const calcDailyTargets = (profile) => {
     proteinTarget,
     carbsTarget,
     fatTarget,
+    rateLevel,
+    rateLabel: rate.label,
+    monthlyChangeKg: rate.monthlyChangeKg,
+    isGentleByBMI: dietGoal.type === 'weight_gain' && currentBMI < 18.5 && dietGoal.rateLevel !== 'gentle',
   }
 }
 

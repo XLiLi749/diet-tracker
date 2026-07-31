@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import useStore from '../store'
-import { calcBMI, calcIdealWeightRange, calcSuggestedTargetWeight } from '../data/mock'
+import { calcBMI, calcIdealWeightRange, calcSuggestedTargetWeight, RATE_LEVELS } from '../data/mock'
 import usagiYellow from '../assets/03_黄色背景乌萨奇.jpg'
 import usagiGlasses from '../assets/04_戴眼镜的乌萨奇.jpg'
 import usagiSleep from '../assets/05_戴睡帽的乌萨奇.jpg'
@@ -295,6 +295,14 @@ export default function Profile() {
               <p className="text-xs text-gray-400">每日目标</p>
               <p className="text-lg font-bold text-primary-600">{targets.calorieTarget}</p>
               <span className="text-[10px] text-gray-400">kcal</span>
+              <p className="text-[10px] text-primary-500 mt-0.5">
+                健康速率·每月约变化{targets.monthlyChangeKg || '1~2'}kg
+              </p>
+              {profile.dietGoal.type === 'weight_gain' && (
+                <p className="text-[10px] text-amber-600 mt-0.5">
+                  💡 以优质蛋白+主食为主
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -314,6 +322,11 @@ export default function Profile() {
                 <p className="text-xs text-primary-600 font-medium mt-0.5">
                   当前：{currentGoal.label}（目标 {profile.dietGoal.targetWeight}kg）
                 </p>
+                {['fat_loss', 'weight_gain', 'muscle_gain'].includes(profile.dietGoal.type) && (
+                  <p className="text-[10px] text-gray-500 mt-0.5">
+                    ⚡ {targets.rateLabel || '温和健康档'} · 每月约变化{targets.monthlyChangeKg || '1~2'}kg
+                  </p>
+                )}
               </div>
             </div>
             <span className="text-gray-400">›</span>
@@ -609,7 +622,6 @@ export default function Profile() {
                   key={goal.key}
                   onClick={() => {
                     updateProfile({ dietGoal: { ...profile.dietGoal, type: goal.key } })
-                    setShowGoalPicker(false)
                   }}
                   className={`w-full flex items-center gap-3 p-4 rounded-xl text-left transition-colors ${
                     profile.dietGoal.type === goal.key
@@ -625,6 +637,45 @@ export default function Profile() {
                 </button>
               ))}
             </div>
+
+            {/* 速率档位选择（仅增重/减重/增肌时显示） */}
+            {['fat_loss', 'weight_gain', 'muscle_gain'].includes(profile.dietGoal.type) && (
+              <div className="mt-4">
+                <p className="text-sm font-semibold text-gray-700 mb-2">⚡ 速率档位</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {Object.values(RATE_LEVELS).map((level) => {
+                    const isGentleForced = targets.isGentleByBMI && level.key === 'gentle'
+                    return (
+                      <button
+                        key={level.key}
+                        onClick={() => {
+                          if (!isGentleForced) {
+                            updateProfile({ dietGoal: { ...profile.dietGoal, rateLevel: level.key } })
+                          }
+                        }}
+                        className={`p-3 rounded-xl text-left transition-colors ${
+                          (profile.dietGoal.rateLevel || 'gentle') === level.key || isGentleForced
+                            ? 'bg-primary-50 border-2 border-primary-400'
+                            : 'bg-gray-50 border-2 border-transparent'
+                        } ${isGentleForced ? 'opacity-80' : ''}`}
+                      >
+                        <p className="text-sm font-bold text-gray-800">{level.label}</p>
+                        <p className="text-[10px] text-gray-500 mt-0.5">{level.desc}</p>
+                        <p className="text-[10px] text-primary-600 mt-1">
+                          每月变化约 {level.monthlyChangeKg}kg
+                        </p>
+                        {isGentleForced && (
+                          <p className="text-[10px] text-amber-600 mt-1">
+                            ⚠️ BMI偏低，自动启用温和档
+                          </p>
+                        )}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
             <div className="mt-4">
               <p className="text-sm text-gray-600 mb-2">目标体重 (kg)</p>
               <input
@@ -637,6 +688,8 @@ export default function Profile() {
               {(() => {
                 const range = calcIdealWeightRange(profile.height)
                 const suggested = calcSuggestedTargetWeight(profile)
+                const targetBMI = parseFloat(calcBMI(profile.dietGoal.targetWeight, profile.height))
+                const isBMIUnhealthy = targetBMI < 18.5 || targetBMI > 24
                 return (
                   <div className="mt-3 space-y-1 text-xs">
                     <p className="text-gray-500">
@@ -655,10 +708,38 @@ export default function Profile() {
                         使用推荐值
                       </button>
                     </p>
+                    {isBMIUnhealthy && (
+                      <div className="mt-2 p-2 bg-amber-50 rounded-lg border border-amber-200">
+                        <p className="text-amber-700">
+                          ⚠️ 目标体重对应 BMI 为 <span className="font-bold">{targetBMI}</span>
+                          ，{targetBMI < 18.5 ? '偏瘦' : '超重'}。
+                        </p>
+                        <p className="text-[11px] text-amber-600 mt-0.5">
+                          健康 BMI 范围为 18.5 ~ 23.9，建议在该范围内设置目标。
+                          当前设置仅供参考，请根据自身情况调整。
+                        </p>
+                      </div>
+                    )}
+                    {parseFloat(bmi) < 18.5 && profile.dietGoal.type === 'weight_gain' && (
+                      <div className="mt-2 p-2 bg-blue-50 rounded-lg border border-blue-200">
+                        <p className="text-blue-700 text-[11px]">
+                          💡 您当前 BMI 为 {bmi}（偏瘦），建议循序渐进增重，
+                          已自动为您启用「温和健康档」，避免肠胃负担。
+                          增重时以优质蛋白（鸡蛋、牛奶、瘦肉、豆制品）+ 主食为主，
+                          避免高油高糖盲目堆热量。
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )
               })()}
             </div>
+            <button
+              onClick={() => setShowGoalPicker(false)}
+              className="w-full mt-4 bg-primary-500 text-white py-3 rounded-xl font-semibold"
+            >
+              完成设置
+            </button>
           </div>
         </div>
       )}
