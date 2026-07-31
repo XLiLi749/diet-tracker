@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import useStore from '../store'
 import { calcBMI, calcIdealWeightRange, calcSuggestedTargetWeight } from '../data/mock'
+import usagiYellow from '../assets/03_黄色背景乌萨奇.jpg'
+import usagiGlasses from '../assets/04_戴眼镜的乌萨奇.jpg'
+import usagiSleep from '../assets/05_戴睡帽的乌萨奇.jpg'
 
 const goalOptions = [
   { key: 'fat_loss', label: '减脂', icon: '🏃', desc: '控制热量，健康减重' },
@@ -199,10 +202,10 @@ export default function Profile() {
         <h1 className="text-xl font-bold text-gray-800 relative z-10">👤 我的</h1>
         <div className="flex items-center gap-4 mt-5 relative z-10">
           <div
-            className="w-16 h-16 rounded-full bg-white shadow-cute flex items-center justify-center text-3xl cursor-pointer"
+            className="w-20 h-20 rounded-full overflow-hidden border-4 border-white shadow-cute cursor-pointer flex-shrink-0"
             onClick={() => setShowGenderPicker(true)}
           >
-            {genderIcon}
+            <img src={usagiYellow} alt="乌萨奇" className="w-full h-full object-cover" />
           </div>
           <div className="flex-1">
             {editingField === 'nickname' ? (
@@ -211,11 +214,11 @@ export default function Profile() {
                   type="text"
                   value={editValue}
                   onChange={(e) => setEditValue(e.target.value)}
-                  className="bg-white/20 rounded-lg px-3 py-1 text-white placeholder-white/50 outline-none w-32"
+                  className="bg-white rounded-lg px-3 py-1 text-gray-800 placeholder-gray-400 outline-none w-32 border border-gray-200"
                   autoFocus
                 />
-                <button onClick={saveEdit} className="text-white font-medium">✓</button>
-                <button onClick={() => setEditingField(null)} className="text-white/60">✕</button>
+                <button onClick={saveEdit} className="text-primary-600 font-bold">✓</button>
+                <button onClick={() => setEditingField(null)} className="text-gray-400">✕</button>
               </div>
             ) : (
               <h2

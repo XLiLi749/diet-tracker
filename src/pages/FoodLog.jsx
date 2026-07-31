@@ -3,6 +3,9 @@ import { useSearchParams } from 'react-router-dom'
 import dayjs from 'dayjs'
 import useStore from '../store'
 import { FOOD_DATABASE, searchFood } from '../data/foods'
+import usagiWalk from '../assets/13_走路的乌萨奇.jpg'
+import usagiEat from '../assets/07_吃东西的乌萨奇.jpg'
+import usagiShy from '../assets/09_害羞的乌萨奇.jpg'
 
 const mealLabels = {
   breakfast: { icon: '🌅', label: '早餐' },
@@ -308,7 +311,12 @@ export default function FoodLog() {
               </div>
 
               {mealLogs.length === 0 ? (
-                <p className="text-sm text-gray-400 text-center py-4">暂无记录，快添加吧~</p>
+                <div className="flex flex-col items-center py-6">
+                  <div className="w-20 h-20 rounded-full overflow-hidden border-4 border-white shadow-cute mb-3">
+                    <img src={usagiEat} alt="乌萨奇" className="w-full h-full object-cover" />
+                  </div>
+                  <p className="text-sm text-gray-400">暂无记录，快添加吧~</p>
+                </div>
               ) : (
                 <div className="space-y-3">
                   {mealLogs.map((log) => (

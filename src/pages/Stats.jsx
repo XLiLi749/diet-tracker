@@ -5,6 +5,8 @@ import {
 } from 'recharts'
 import dayjs from 'dayjs'
 import useStore from '../store'
+import usagiHoney from '../assets/06_蜜蜂造型乌萨奇.jpg'
+import usagiGlasses from '../assets/04_戴眼镜的乌萨奇.jpg'
 
 const goalLabels = {
   fat_loss: { label: '减脂', color: '#22c55e' },
@@ -134,7 +136,12 @@ export default function Stats() {
       <div className="bg-gradient-to-br from-usagi-skyLight via-usagi-cream to-usagi-mintLight px-5 pt-12 pb-10 rounded-b-[2.5rem] relative overflow-hidden">
         <div className="absolute -right-8 -top-8 w-28 h-28 rounded-full bg-white/40" />
         <div className="absolute left-12 bottom-4 w-3 h-3 rounded-full bg-white/60" />
-        <h1 className="text-xl font-bold text-gray-800 relative z-10">📊 数据统计</h1>
+        <div className="flex items-center gap-3 relative z-10 mb-4">
+          <div className="w-12 h-12 rounded-full overflow-hidden border-3 border-white shadow-cute flex-shrink-0">
+            <img src={usagiGlasses} alt="乌萨奇" className="w-full h-full object-cover" />
+          </div>
+          <h1 className="text-xl font-bold text-gray-800">📊 数据统计</h1>
+        </div>
         <div className="flex gap-2 mt-4 flex-wrap relative z-10">
           <button
             onClick={() => setTimeRange('week')}

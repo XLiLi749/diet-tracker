@@ -6,6 +6,8 @@ import {
 } from 'recharts'
 import useStore from '../store'
 import ProgressRing from '../components/ProgressRing'
+import usagiYellow from '../assets/03_黄色背景乌萨奇.jpg'
+import usagiEat from '../assets/07_吃东西的乌萨奇.jpg'
 
 const mealLabels = {
   breakfast: { icon: '🌅', label: '早餐', time: '06:00-09:00' },
@@ -63,8 +65,8 @@ export default function Dashboard() {
             <h1 className="text-xl font-bold text-gray-800">{greeting()}，{profile.nickname}</h1>
             <p className="text-sm text-gray-600 mt-1">今天也要好好吃饭哦 🍞</p>
           </div>
-          <div className="w-14 h-14 rounded-full bg-white shadow-cute flex items-center justify-center text-3xl">
-            🐰
+          <div className="w-16 h-16 rounded-full bg-white shadow-cute overflow-hidden border-4 border-white">
+            <img src={usagiYellow} alt="乌萨奇" className="w-full h-full object-cover" />
           </div>
         </div>
 
@@ -181,7 +183,9 @@ export default function Dashboard() {
               {/* 深夜场景：达标显示鼓励，未达标显示加餐 */}
               {isLateNight && isOnTrack ? (
                 <div className="bg-gradient-to-br from-usagi-mintLight to-usagi-skyLight rounded-2xl p-5 text-center">
-                  <div className="text-5xl mb-3">🎉🐰</div>
+                  <div className="w-24 h-24 mx-auto mb-3 rounded-full overflow-hidden border-4 border-white shadow-cute">
+                    <img src={usagiEat} alt="乌萨奇吃东西" className="w-full h-full object-cover" />
+                  </div>
                   <p className="text-base font-bold text-green-700 mb-2">今日目标已达成！</p>
                   <p className="text-sm text-green-600">{encouragement}</p>
                   <p className="text-xs text-green-500 mt-3 bg-white/50 rounded-full px-3 py-1 inline-block">已摄入 {summary.calories} / {targets.calorieTarget} kcal</p>

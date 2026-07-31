@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import dayjs from 'dayjs'
 import useStore from '../store'
+import usagiToast from '../assets/01_吃吐司的乌萨奇.jpg'
+import usagiHoney from '../assets/06_蜜蜂造型乌萨奇.jpg'
 
 const mealLabels = {
   breakfast: { icon: '🌅', label: '早餐' },
@@ -116,10 +118,17 @@ export default function Recommendation() {
       <div className="bg-gradient-to-br from-usagi-pinkLight via-usagi-cream to-usagi-mintLight px-5 pt-12 pb-10 rounded-b-[2.5rem] relative overflow-hidden">
         <div className="absolute -right-6 -top-6 w-24 h-24 rounded-full bg-white/40" />
         <div className="absolute left-8 bottom-2 w-3 h-3 rounded-full bg-white/60" />
-        <h1 className="text-xl font-bold text-gray-800 relative z-10">🍽️ 智能推荐</h1>
-        <p className="text-sm text-gray-600 mt-1 relative z-10">
-          基于你的身体数据和饮食目标，为你定制今日食谱
-        </p>
+        <div className="flex items-center gap-4 relative z-10">
+          <div className="w-16 h-16 rounded-full overflow-hidden border-4 border-white shadow-cute flex-shrink-0">
+            <img src={usagiToast} alt="乌萨奇" className="w-full h-full object-cover" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-gray-800">🍽️ 智能推荐</h1>
+            <p className="text-sm text-gray-600 mt-1">
+              基于你的身体数据和饮食目标，为你定制今日食谱
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* 口味偏好输入 */}
