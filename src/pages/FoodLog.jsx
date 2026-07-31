@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom' 
 import dayjs from 'dayjs'
 import useStore from '../store'
 import { FOOD_DATABASE, searchFood } from '../data/foods'
