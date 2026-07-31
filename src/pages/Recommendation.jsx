@@ -18,6 +18,12 @@ const tasteTags = [
   { key: 'soup', label: '🍲 汤类' },
   { key: 'high_protein', label: '💪 高蛋白' },
   { key: 'budget', label: '💰 省钱' },
+  { key: '川菜', label: '🔥 川菜' },
+  { key: '湘菜', label: '🌶️ 湘菜' },
+  { key: '赣菜', label: '🥘 赣菜' },
+  { key: '粤菜', label: '🦐 粤菜' },
+  { key: '东北菜', label: '🍲 东北菜' },
+  { key: '江浙菜', label: '🐟 江浙菜' },
 ]
 
 const specialScenes = [
@@ -47,6 +53,7 @@ export default function Recommendation() {
     tastePreferences,
     setTastePreferences,
     getTodaySummary,
+    setActiveScene: setSceneInStore,
   } = useStore()
 
   const [activeTags, setActiveTags] = useState(tastePreferences)
@@ -74,7 +81,9 @@ export default function Recommendation() {
 
   const handleSceneSelect = (sceneKey) => {
     setActiveScene(sceneKey)
+    setSceneInStore(sceneKey)
     setShowSceneDropdown(false)
+    generateTodayRecommendations()
   }
 
   const handleApplyTaste = () => {
@@ -225,7 +234,6 @@ export default function Recommendation() {
                   </div>
                   <div className="bg-gray-50 rounded-xl p-3">
                     <p className="text-sm font-medium text-gray-700">{rec.name}</p>
-                    <p className="text-xs text-gray-400 mt-1">📍 {rec.canteen}</p>
                     <div className="flex gap-3 mt-2 text-xs text-gray-500">
                       <span>蛋白 {rec.totalNutrition.protein}g</span>
                       <span>碳水 {rec.totalNutrition.carbs}g</span>

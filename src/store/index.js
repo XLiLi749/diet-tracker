@@ -8,7 +8,7 @@ import {
   generateMockLogs,
   generateMockBodyRecords,
 } from '../data/mock'
-import { getFoodById, CANTEEN_RECIPES } from '../data/foods'
+import { getFoodById, FOOD_DATABASE } from '../data/foods'
 
 const useStore = create(
   persist(
@@ -30,6 +30,11 @@ const useStore = create(
 
       // 口味偏好（临时）
       tastePreferences: [],
+
+      // 当前特殊场景
+      activeScene: 'normal',
+
+      setActiveScene: (scene) => set({ activeScene: scene }),
 
       // ========== 用户档案相关 ==========
       updateProfile: (updates) => {
@@ -155,72 +160,119 @@ const useStore = create(
 
       // ========== 推荐相关 ==========
       generateTodayRecommendations: () => {
-        const { profile, tastePreferences } = get()
+        const { profile, tastePreferences, activeScene, targets } = get()
         const date = dayjs().format('YYYY-MM-DD')
+        const dislikes = profile.restrictions.dislikes || []
+        const allergies = profile.restrictions.allergies || []
 
-        // 根据口味偏好计算食谱匹配度得分
-        const scoreRecipe = (recipe) => {
-          const tags = recipe.tags || []
+        // ========== 场景强制标签（会影响权重和过滤） ==========
+        const sceneBoostTags = {
+          normal: [],
+          party: ['budget', '高碳水'],
+          busy: ['budget', '便携'],
+          poor: ['budget'],
+          exam: ['high_protein', '补脑'],
+          gym: ['high_protein', '增肌'],
+          sick: ['light', 'less_oil', '养胃'],
+          travel: ['便携'],
+          date: ['精致', '西餐', '日料'],
+          festival: ['聚餐', '高热量'],
+          period: ['补铁', '温热'],
+          pregnancy: ['营养均衡', '清淡'],
+          breakfast_skip: ['快手', '早餐'],
+          night_owl: ['light', '宵夜'],
+          vegetarian: ['素食'],
+          detox: ['light', 'less_oil', '低卡'],
+        }
+        const sceneTags = sceneBoostTags[activeScene] || []
+
+        // ========== 过滤不喜欢/过敏的食物 ==========
+        const isFoodOk = (food) => {
+          if (dislikes.some(d => food.name.includes(d))) return false
+          if (allergies.some(a => food.name.includes(a))) return false
+          if (activeScene === 'vegetarian' && food.category === '肉类') return false
+          if (activeScene === 'detox' && food.tags?.includes('高热量')) return false
+          if (activeScene === 'sick' && food.tags?.includes('油炸')) return false
+          return true
+        }
+
+        // ========== 给食物打分（综合偏好+场景） ==========
+        const scoreFood = (food) => {
           let score = 0
+          const tags = food.tags || []
           tastePreferences.forEach(pref => {
-            if (tags.includes(pref)) {
-              score += 10 // 匹配一个偏好得10分
+            if (tags.includes(pref)) score += 15
+          })
+          sceneTags.forEach(tag => {
+            if (tags.includes(tag)) score += 20
+          })
+          // 菜系偏好（如果用户口味里选了川菜/湘菜等，匹配菜名或标签）
+          const cuisineMap = {
+            '川菜': ['川菜', '辣'],
+            '湘菜': ['湘菜', '辣'],
+            '粤菜': ['粤菜', '清淡'],
+            '东北菜': ['东北菜'],
+            '江浙菜': ['江浙菜', '甜口'],
+            '赣菜': ['赣菜', '辣'],
+          }
+          tastePreferences.forEach(pref => {
+            if (cuisineMap[pref]) {
+              cuisineMap[pref].forEach(t => {
+                if (tags.includes(t) || food.name.includes(pref)) score += 12
+              })
             }
           })
-          // 加一点随机扰动，避免每次完全一样
-          score += Math.random() * 3
+          score += Math.random() * 5
           return score
         }
 
-        // 智能选择：优先选匹配度高的食谱
-        const smartPick = (arr) => {
-          if (tastePreferences.length === 0) {
-            // 没有偏好，完全随机
-            return arr[Math.floor(Math.random() * arr.length)]
+        // ========== 从食物库选菜（按类别+排序） ==========
+        const pickByCategory = (category, count = 1, excludeIds = []) => {
+          const candidates = FOOD_DATABASE.filter(f =>
+            f.category === category && isFoodOk(f) && !excludeIds.includes(f.id)
+          )
+          candidates.sort((a, b) => scoreFood(b) - scoreFood(a))
+          const top = candidates.slice(0, Math.max(count * 3, 5))
+          const result = []
+          for (let i = 0; i < count && top.length > 0; i++) {
+            const idx = Math.floor(Math.random() * Math.min(3, top.length))
+            result.push(top.splice(idx, 1)[0])
           }
-          // 按匹配度排序
-          const scored = arr.map(r => ({ recipe: r, score: scoreRecipe(r) }))
-          scored.sort((a, b) => b.score - a.score)
-          // 从匹配度最高的前3个里随机选一个，增加多样性
-          const top = scored.slice(0, Math.min(3, scored.length))
-          return top[Math.floor(Math.random() * top.length)].recipe
+          return result
         }
 
-        const filterByDislikes = (recipe) => {
-          const dislikes = profile.restrictions.dislikes || []
-          const allergies = profile.restrictions.allergies || []
-          if (dislikes.length === 0 && allergies.length === 0) return true
-          const items = recipe.items || []
-          return !items.some(foodId => {
-            const food = getFoodById(foodId)
-            if (!food) return false
-            return dislikes.some(d => food.name.includes(d))
-              || allergies.some(a => food.name.includes(a))
-          })
+        const pickByTags = (tags, count = 1, excludeIds = []) => {
+          const candidates = FOOD_DATABASE.filter(f =>
+            isFoodOk(f) && !excludeIds.includes(f.id) &&
+            tags.some(t => f.tags?.includes(t))
+          )
+          candidates.sort((a, b) => scoreFood(b) - scoreFood(a))
+          const top = candidates.slice(0, Math.max(count * 3, 5))
+          const result = []
+          for (let i = 0; i < count && top.length > 0; i++) {
+            const idx = Math.floor(Math.random() * Math.min(3, top.length))
+            result.push(top.splice(idx, 1)[0])
+          }
+          return result
         }
 
-        const breakfast = smartPick(CANTEEN_RECIPES.breakfast.filter(filterByDislikes))
-        const lunch = smartPick(CANTEEN_RECIPES.lunch.filter(filterByDislikes))
-        const dinner = smartPick(CANTEEN_RECIPES.dinner.filter(filterByDislikes))
-        const snack = smartPick(CANTEEN_RECIPES.snack.filter(filterByDislikes))
+        // ========== 构建餐次（灵活组合） ==========
+        const buildFoodItem = (food, qty) => {
+          const factor = qty / 100
+          return {
+            foodId: food.id,
+            name: food.name,
+            quantity: qty,
+            unit: (food.category === '饮料' || food.category === '汤类') ? 'ml' : 'g',
+            calories: Math.round(food.calories * factor),
+            protein: Math.round(food.protein * factor * 10) / 10,
+            carbs: Math.round(food.carbs * factor * 10) / 10,
+            fat: Math.round(food.fat * factor * 10) / 10,
+          }
+        }
 
-        const buildMealDetail = (recipe) => {
-          const items = recipe.items.map(foodId => {
-            const food = getFoodById(foodId)
-            const qty = food.category === '主食' ? 150 : food.category === '肉类' ? 120 : food.category === '汤类' ? 200 : 100
-            const factor = qty / 100
-            return {
-              foodId,
-              name: food.name,
-              quantity: qty,
-              unit: food.category === '饮料' || food.category === '汤类' ? 'ml' : 'g',
-              calories: Math.round(food.calories * factor),
-              protein: Math.round(food.protein * factor * 10) / 10,
-              carbs: Math.round(food.carbs * factor * 10) / 10,
-              fat: Math.round(food.fat * factor * 10) / 10,
-            }
-          })
-
+        const buildMeal = (itemsArr, mealName) => {
+          const items = itemsArr.map(({ food, qty }) => buildFoodItem(food, qty))
           let totalCals = 0, totalProtein = 0, totalCarbs = 0, totalFat = 0
           items.forEach(it => {
             totalCals += it.calories
@@ -228,9 +280,8 @@ const useStore = create(
             totalCarbs += it.carbs
             totalFat += it.fat
           })
-
           return {
-            name: recipe.name,
+            name: mealName || items.map(i => i.name).join(' + '),
             items,
             totalNutrition: {
               calories: Math.round(totalCals),
@@ -241,12 +292,57 @@ const useStore = create(
           }
         }
 
+        // ========== 生成各餐次 ==========
+        // 早餐：主食(1) + 蛋奶(1) + 可选小菜
+        const breakfastStaple = pickByTags(['早餐', '主食'], 1)[0] || pickByCategory('主食', 1)[0]
+        const breakfastEgg = pickByTags(['早餐'], 1, breakfastStaple ? [breakfastStaple.id] : [])[0] || pickByCategory('蛋奶', 1)[0]
+        const breakfastItems = []
+        if (breakfastStaple) breakfastItems.push({ food: breakfastStaple, qty: breakfastStaple.category === '主食' ? 150 : 100 })
+        if (breakfastEgg) breakfastItems.push({ food: breakfastEgg, qty: breakfastEgg.category === '蛋奶' ? 100 : 50 })
+        const breakfast = buildMeal(breakfastItems)
+
+        // 午餐：主食(1) + 主菜(1) + 配菜(1)
+        const lunchStaple = pickByTags(['rice', '主食'], 1)[0] || pickByCategory('主食', 1)[0]
+        const lunchMain = pickByCategory('肉类', 1, lunchStaple ? [lunchStaple.id] : [])[0]
+        const lunchSide = pickByCategory('蔬菜', 1, [lunchStaple?.id, lunchMain?.id].filter(Boolean))[0]
+        const lunchItems = []
+        if (lunchStaple) lunchItems.push({ food: lunchStaple, qty: 150 })
+        if (lunchMain) lunchItems.push({ food: lunchMain, qty: 120 })
+        if (lunchSide) lunchItems.push({ food: lunchSide, qty: 100 })
+        const lunch = buildMeal(lunchItems)
+
+        // 晚餐：主食(1) + 主菜(1) + 蔬菜(1)
+        const usedForDinner = new Set()
+        const dinnerStaple = pickByTags(['rice', '主食', 'light'], 1)[0] || pickByCategory('主食', 1)[0]
+        if (dinnerStaple) usedForDinner.add(dinnerStaple.id)
+        const dinnerMain = pickByTags(['high_protein', '肉类', '水产'], 1, Array.from(usedForDinner))[0] || pickByCategory('肉类', 1, Array.from(usedForDinner))[0]
+        if (dinnerMain) usedForDinner.add(dinnerMain.id)
+        const dinnerVeg = pickByCategory('蔬菜', 1, Array.from(usedForDinner))[0]
+        const dinnerItems = []
+        if (dinnerStaple) dinnerItems.push({ food: dinnerStaple, qty: 120 })
+        if (dinnerMain) dinnerItems.push({ food: dinnerMain, qty: 100 })
+        if (dinnerVeg) dinnerItems.push({ food: dinnerVeg, qty: 100 })
+        const dinner = buildMeal(dinnerItems)
+
+        // 加餐：水果/蛋奶/坚果
+        const snack = (() => {
+          const fruit = pickByCategory('水果', 1)[0]
+          if (fruit) {
+            return buildMeal([{ food: fruit, qty: 150 }])
+          }
+          const yogurt = pickByTags(['加餐', '益生菌'], 1)[0] || pickByCategory('蛋奶', 1)[0]
+          if (yogurt) {
+            return buildMeal([{ food: yogurt, qty: 150 }])
+          }
+          return buildMeal([{ food: { id: 'dummy', name: '加餐', calories: 100, protein: 2, carbs: 20, fat: 1, tags: [] }, qty: 100 }])
+        })()
+
         const recs = {
           date,
-          breakfast: buildMealDetail(breakfast),
-          lunch: buildMealDetail(lunch),
-          dinner: buildMealDetail(dinner),
-          snack: buildMealDetail(snack),
+          breakfast,
+          lunch,
+          dinner,
+          snack,
           adjustments: [],
         }
 
