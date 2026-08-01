@@ -47,6 +47,34 @@ const useStore = create(
       // 美食手账记录
       journals: [],
 
+      // 个人自定义菜品库
+      customFoods: [],
+
+      // 添加自定义菜品
+      addCustomFood: (food) => {
+        const { customFoods } = get()
+        const newFood = {
+          ...food,
+          id: food.id || ('custom_' + Date.now()),
+          isCustom: true,
+          createdAt: Date.now(),
+        }
+        set({ customFoods: [newFood, ...customFoods] })
+        return newFood
+      },
+
+      // 删除自定义菜品
+      deleteCustomFood: (foodId) => {
+        const { customFoods } = get()
+        set({ customFoods: customFoods.filter(f => f.id !== foodId) })
+      },
+
+      // 获取所有可用食物（系统库 + 个人库）
+      getAllFoods: () => {
+        const { customFoods } = get()
+        return [...customFoods, ...FOOD_DATABASE]
+      },
+
       toggleFavoriteFood: (foodId) => {
         const { favorites } = get()
         const foods = favorites.foods.includes(foodId)

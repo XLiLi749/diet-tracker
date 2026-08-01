@@ -576,6 +576,34 @@ export const FOOD_DATABASE = [
   { id: 'dish_disanxian', name: '地三鲜', category: '蔬菜', calories: 160, protein: 3.0, carbs: 18.0, fat: 9.0, fiber: 2.0, tags: ['家常菜', '东北菜'], price: [12, 20] },
   { id: 'dish_tangcu_liji', name: '糖醋里脊', category: '肉类', calories: 260, protein: 18.0, carbs: 22.0, fat: 12.0, fiber: 0.5, tags: ['家常菜', '甜口'], price: [25, 40] },
 
+  // ============== 家常菜·素菜 ==============
+  { id: 'dish_chao_nangua', name: '炒南瓜', category: '蔬菜', calories: 85, protein: 2.0, carbs: 14.0, fat: 3.0, fiber: 2.5, tags: ['家常菜', '素菜', '食堂常见'], price: [8, 15] },
+  { id: 'dish_qingchao_sigua', name: '清炒丝瓜', category: '蔬菜', calories: 65, protein: 2.0, carbs: 9.0, fat: 2.5, fiber: 2.0, tags: ['家常菜', '素菜', '清淡'], price: [10, 18] },
+  { id: 'dish_hongshao_qiezi', name: '红烧茄子', category: '蔬菜', calories: 130, protein: 2.5, carbs: 15.0, fat: 7.5, fiber: 3.0, tags: ['家常菜', '素菜', '重油'], price: [12, 20] },
+  { id: 'dish_jiucai_chaodan', name: '韭菜炒蛋', category: '蛋奶', calories: 150, protein: 10.0, carbs: 5.0, fat: 11.0, fiber: 1.5, tags: ['家常菜', '食堂常见'], price: [10, 18] },
+  { id: 'dish_zheng_nangua', name: '蒸南瓜', category: '蔬菜', calories: 35, protein: 1.0, carbs: 8.0, fat: 0.2, fiber: 2.0, tags: ['家常菜', '素菜', '蒸菜', '清淡'], price: [5, 10] },
+  { id: 'dish_muer_chao_shanyao', name: '木耳炒山药', category: '蔬菜', calories: 95, protein: 3.0, carbs: 14.0, fat: 3.5, fiber: 3.0, tags: ['家常菜', '素菜', '健康'], price: [15, 25] },
+  { id: 'dish_xianggan_chaorou', name: '香干炒肉', category: '豆制品', calories: 185, protein: 16.0, carbs: 8.0, fat: 11.0, fiber: 2.0, tags: ['家常菜', '高蛋白', '食堂常见'], price: [14, 22] },
+
+  // ============== 家常菜·荤素合烧 ==============
+  { id: 'dish_anchundan_shaorou', name: '鹌鹑蛋烧肉', category: '肉类', calories: 255, protein: 20.0, carbs: 8.0, fat: 17.0, fiber: 0.5, tags: ['家常菜', '高蛋白', '红烧'], price: [25, 40] },
+  { id: 'dish_oupian_chaorou', name: '藕片炒肉', category: '蔬菜', calories: 155, protein: 10.0, carbs: 15.0, fat: 7.0, fiber: 2.5, tags: ['家常菜', '食堂常见'], price: [15, 25] },
+  { id: 'dish_luobo_shaorou', name: '萝卜烧肉', category: '肉类', calories: 180, protein: 15.0, carbs: 10.0, fat: 9.0, fiber: 2.0, tags: ['家常菜', '红烧'], price: [18, 30] },
+
+  // ============== 家常菜·炖菜汤类 ==============
+  { id: 'dish_donggua_paigu_tang', name: '冬瓜排骨汤', category: '汤类', calories: 85, protein: 10.0, carbs: 4.0, fat: 3.5, fiber: 1.0, tags: ['家常菜', '汤类', '滋补'], price: [20, 35] },
+  { id: 'dish_xihongshi_jidan_tang', name: '西红柿鸡蛋汤', category: '汤类', calories: 50, protein: 3.0, carbs: 5.0, fat: 2.0, fiber: 0.5, tags: ['家常菜', '汤类', '清淡'], price: [6, 12] },
+  { id: 'dish_zicai_jidan_tang', name: '紫菜鸡蛋汤', category: '汤类', calories: 55, protein: 4.0, carbs: 4.0, fat: 2.5, fiber: 0.8, tags: ['家常菜', '汤类'], price: [5, 10] },
+
+  // ============== 家常菜·其他 ==============
+  { id: 'dish_mapo_qiezi', name: '麻婆茄子', category: '蔬菜', calories: 140, protein: 3.0, carbs: 12.0, fat: 9.0, fiber: 2.5, tags: ['家常菜', '素菜', '辣'], price: [12, 20] },
+  { id: 'dish_ganbian_sijidou', name: '干煸四季豆', category: '蔬菜', calories: 145, protein: 4.0, carbs: 14.0, fat: 8.5, fiber: 3.5, tags: ['家常菜', '素菜', '重油'], price: [14, 22] },
+  { id: 'dish_xiangcai_niurou', name: '香菜牛肉', category: '肉类', calories: 190, protein: 22.0, carbs: 4.0, fat: 10.0, fiber: 1.0, tags: ['家常菜', '高蛋白'], price: [28, 45] },
+  { id: 'dish_congbao_yangrou', name: '葱爆羊肉', category: '肉类', calories: 230, protein: 20.0, carbs: 4.0, fat: 16.0, fiber: 1.0, tags: ['家常菜', '高蛋白', '高热量'], price: [35, 55] },
+  { id: 'dish_shuizhu_niurou', name: '水煮牛肉', category: '肉类', calories: 250, protein: 24.0, carbs: 6.0, fat: 15.0, fiber: 1.0, tags: ['川菜', '辣', '高蛋白', '重油'], price: [30, 48] },
+  { id: 'dish_ganbian_niurou', name: '干煸牛肉丝', category: '肉类', calories: 235, protein: 22.0, carbs: 8.0, fat: 14.0, fiber: 1.5, tags: ['川菜', '辣', '高蛋白', '重油'], price: [28, 45] },
+  { id: 'dish_heizhima_liji', name: '黑芝麻里脊', category: '肉类', calories: 220, protein: 22.0, carbs: 10.0, fat: 11.0, fiber: 1.0, tags: ['家常菜', '高蛋白'], price: [25, 40] },
+
   // ============== 粉面主食补充 ==============
   { id: 'dish_beef_noodle', name: '牛肉面', category: '主食', calories: 165, protein: 14.0, carbs: 22.0, fat: 4.0, fiber: 1.5, tags: ['面食', '独立餐食', '高蛋白'], price: [15, 25] },
   { id: 'dish_nanchang_banfen', name: '南昌拌粉', category: '主食', calories: 185, protein: 5.5, carbs: 32.0, fat: 5.0, fiber: 1.5, tags: ['赣菜', '面食', '独立餐食', '早餐'], price: [8, 15] },
@@ -588,14 +616,143 @@ export const FOOD_DATABASE = [
 export const getFoodById = (id) => FOOD_DATABASE.find(f => f.id === id)
 
 // 按名称模糊搜索
-export const searchFood = (keyword) => {
-  if (!keyword) return FOOD_DATABASE.slice(0, 30)
+export const searchFood = (keyword, customFoods = []) => {
+  if (!keyword) return [...customFoods, ...FOOD_DATABASE].slice(0, 30)
   const kw = keyword.toLowerCase()
-  return FOOD_DATABASE.filter(f =>
+  const allFoods = [...customFoods, ...FOOD_DATABASE]
+  return allFoods.filter(f =>
     f.name.toLowerCase().includes(kw) ||
-    f.tags.some(t => t.toLowerCase().includes(kw)) ||
-    f.category.toLowerCase().includes(kw)
+    (f.tags && f.tags.some(t => t.toLowerCase().includes(kw))) ||
+    (f.category && f.category.toLowerCase().includes(kw))
   )
+}
+
+// ============== 智能食材匹配（兜底机制） ==============
+
+// 食材关键词 → 对应标准食物的映射表
+const INGREDIENT_MAP = [
+  // 素菜
+  { kw: '南瓜', food: 'sweet_potato', ratio: 0.7, nameHint: '南瓜' },
+  { kw: '丝瓜', food: 'cucumber', ratio: 1.0, nameHint: '丝瓜' },
+  { kw: '茄子', food: 'eggplant', ratio: 1.0, nameHint: '茄子' },
+  { kw: '韭菜', food: 'scallion', ratio: 0.8, nameHint: '韭菜' },
+  { kw: '藕', food: 'lotus_root', ratio: 1.0, nameHint: '藕' },
+  { kw: '萝卜', food: 'carrot', ratio: 1.0, nameHint: '萝卜' },
+  { kw: '冬瓜', food: 'cucumber', ratio: 1.2, nameHint: '冬瓜' },
+  { kw: '木耳', food: 'mushroom', ratio: 0.5, nameHint: '木耳' },
+  { kw: '山药', food: 'potato', ratio: 0.9, nameHint: '山药' },
+  { kw: '四季豆', food: 'greens', ratio: 1.0, nameHint: '四季豆' },
+  { kw: '香菜', food: 'scallion', ratio: 0.5, nameHint: '香菜' },
+  { kw: '葱', food: 'scallion', ratio: 1.0, nameHint: '葱' },
+  // 肉蛋奶
+  { kw: '鹌鹑蛋', food: 'egg_boiled', ratio: 1.2, nameHint: '鹌鹑蛋' },
+  { kw: '鸡蛋', food: 'egg_boiled', ratio: 1.0, nameHint: '鸡蛋' },
+  { kw: '肉', food: 'pork_belly', ratio: 1.0, nameHint: '猪肉' },
+  { kw: '五花肉', food: 'pork_belly', ratio: 1.0, nameHint: '五花肉' },
+  { kw: '瘦肉', food: 'pork_lean', ratio: 1.0, nameHint: '瘦肉' },
+  { kw: '里脊', food: 'pork_lean', ratio: 1.0, nameHint: '里脊肉' },
+  { kw: '牛肉', food: 'chicken_breast', ratio: 0.9, nameHint: '牛肉' },
+  { kw: '羊肉', food: 'chicken_breast', ratio: 1.1, nameHint: '羊肉' },
+  { kw: '排骨', food: 'pork_ribs', ratio: 1.0, nameHint: '排骨' },
+  { kw: '鸡肉', food: 'chicken_breast', ratio: 1.0, nameHint: '鸡肉' },
+  { kw: '鱼', food: 'salmon', ratio: 0.8, nameHint: '鱼肉' },
+  { kw: '香干', food: 'tofu_firm', ratio: 0.9, nameHint: '香干' },
+  { kw: '豆腐', food: 'tofu', ratio: 1.0, nameHint: '豆腐' },
+  { kw: '豆干', food: 'tofu_firm', ratio: 0.9, nameHint: '豆干' },
+  // 主食
+  { kw: '粉', food: 'rice_noodle', ratio: 1.0, nameHint: '米粉' },
+  { kw: '面', food: 'noodle', ratio: 1.0, nameHint: '面条' },
+]
+
+// 烹饪方式 → 热量调整系数
+const COOK_METHOD_MAP = [
+  { kw: '红烧', oil: 8, soup: true, pct: 0.25 },   // 红烧多加8g油/100g，有汤汁
+  { kw: '烧', oil: 5, soup: true, pct: 0.15 },
+  { kw: '炒', oil: 5, soup: false, pct: 0 },
+  { kw: '清炒', oil: 3, soup: false, pct: 0 },
+  { kw: '干煸', oil: 7, soup: false, pct: 0 },
+  { kw: '干锅', oil: 10, soup: false, pct: 0.3 },
+  { kw: '水煮', oil: 8, soup: true, pct: 0.35 },
+  { kw: '蒸', oil: 0, soup: false, pct: 0 },
+  { kw: '炖', oil: 2, soup: true, pct: 0.1 },
+  { kw: '煮', oil: 0, soup: true, pct: 0 },
+  { kw: '卤', oil: 3, soup: true, pct: 0.15 },
+  { kw: '焖', oil: 4, soup: true, pct: 0.15 },
+]
+
+// 识别菜品的烹饪方式
+const detectCookMethod = (name) => {
+  for (const m of COOK_METHOD_MAP) {
+    if (name.includes(m.kw)) return m
+  }
+  return { kw: '炒', oil: 5, soup: false, pct: 0 }  // 默认清炒
+}
+
+// 从菜品名中识别食材
+const extractIngredients = (name) => {
+  const found = []
+  for (const ing of INGREDIENT_MAP) {
+    if (name.includes(ing.kw)) {
+      found.push(ing)
+    }
+  }
+  // 如果一个食材都没识别到，用通用猜测
+  if (found.length === 0) {
+    if (name.includes('肉')) return [{ kw: '肉', food: 'pork_lean', ratio: 1.0, nameHint: '肉' }]
+    return [{ kw: '素菜', food: 'greens', ratio: 1.0, nameHint: '时令蔬菜' }]
+  }
+  return found
+}
+
+// 基于食材组合智能估算菜品热量
+export const smartGuessDish = (dishName) => {
+  const ingredients = extractIngredients(dishName)
+  const cookMethod = detectCookMethod(dishName)
+
+  // 汇总食材营养（假设总量100g，各食材均分）
+  const count = ingredients.length
+  let calories = 0, protein = 0, carbs = 0, fat = 0, fiber = 0
+
+  for (const ing of ingredients) {
+    const baseFood = getFoodById(ing.food)
+    if (!baseFood) continue
+    const ratio = ing.ratio / count
+    calories += baseFood.calories * ratio
+    protein += baseFood.protein * ratio
+    carbs += baseFood.carbs * ratio
+    fat += baseFood.fat * ratio
+    fiber += (baseFood.fiber || 0) * ratio
+  }
+
+  // 加上烹饪用油（每100g菜品的用油量）
+  const oilCal = cookMethod.oil * 9  // 1g油=9kcal
+  calories += oilCal
+  fat += cookMethod.oil
+
+  // 如果没有任何食材数据，给一个通用估算
+  if (calories < 30) {
+    calories = 150
+    protein = 6
+    carbs = 15
+    fat = 8
+  }
+
+  return {
+    id: 'smart_guess_' + Date.now(),
+    name: dishName,
+    category: cookMethod.soup ? '汤类' : (ingredients.some(i => ['肉', '鸡', '牛', '羊', '鱼', '蛋'].some(x => i.kw.includes(x))) ? '肉类' : '蔬菜'),
+    calories: Math.round(calories),
+    protein: Math.round(protein * 10) / 10,
+    carbs: Math.round(carbs * 10) / 10,
+    fat: Math.round(fat * 10) / 10,
+    fiber: Math.round(fiber * 10) / 10,
+    tags: ['智能估算', cookMethod.soup ? '有汤汁' : '少油', ...ingredients.map(i => i.nameHint)],
+    price: [15, 25],
+    isSmartGuess: true,
+    cookMethod: cookMethod.kw,
+    hasSoup: cookMethod.soup,
+    ingredients: ingredients.map(i => i.nameHint),
+  }
 }
 
 // 食堂推荐菜品池（用于智能推荐）

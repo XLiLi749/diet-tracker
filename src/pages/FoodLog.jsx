@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import dayjs from 'dayjs'
 import useStore from '../store'
-import { FOOD_DATABASE, searchFood } from '../data/foods'
+import { FOOD_DATABASE, searchFood, smartGuessDish } from '../data/foods'
 import usagiWalk from '../assets/13_走路的乌萨奇.jpg'
 import usagiEat from '../assets/07_吃东西的乌萨奇.jpg'
 import usagiShy from '../assets/09_害羞的乌萨奇.jpg'
@@ -27,6 +27,7 @@ export default function FoodLog() {
     addFoodLog,
     deleteFoodLog,
     addJournal,
+    customFoods,
   } = useStore()
 
   const [selectedDate, setSelectedDate] = useState(dayjs().format('YYYY-MM-DD'))
@@ -61,7 +62,27 @@ export default function FoodLog() {
     return options
   }, [])
 
-  const searchResults = useMemo(() => searchFood(searchKeyword), [searchKeyword])
+  const [showSmartGuessTip, setShowSmartGuessTip] = useState(false)
+  const [smartGuessResult, setSmartGuessResult] = useState(null)
+  const [showCustomFoodModal, setShowCustomFoodModal] = useState(false)
+  const [customForm, setCustomForm] = useState({
+    name: '', category: '蔬菜', calories: 100, protein: 5, carbs: 15, fat: 3,
+    cookMethod: '清炒', hasSoup: false, qty: 150,
+  })
+
+  const { addCustomFood } = useStore()
+
+  const searchResults = useMemo(() => {
+    const results = searchFood(searchKeyword, customFoods)
+    // 如果搜索关键词存在但结果很少，生成智能估算
+    if (searchKeyword && searchKeyword.trim() && results.length < 3) {
+      const guess = smartGuessDish(searchKeyword.trim())
+      setSmartGuessResult(guess)
+    } else {
+      setSmartGuessResult(null)
+    }
+    return results
+  }, [searchKeyword, customFoods])
 
   // 按餐次分组
   const groupedLogs = useMemo(() => {
@@ -477,6 +498,45 @@ export default function FoodLog() {
             {/* 搜索结果 */}
             <div className="flex-1 overflow-y-auto px-5 pb-3">
               <div className="space-y-2">
+                {/* 智能估算结果 */}
+                {smartGuessResult && searchKeyword && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-2">
+                    <p className="text-xs text-amber-700 font-medium mb-2">
+                      🤖 暂无「{searchKeyword}」标准条目，已根据食材组合智能估算：
+                    </p>
+                    <button
+                      onClick={() => handleSelectFood(smartGuessResult)}
+                      className="w-full flex items-center justify-between p-2 bg-white rounded-lg hover:bg-amber-50 transition-colors text-left"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-sm font-medium text-gray-800">{smartGuessResult.name}</p>
+                          <span className="text-[10px] px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded-full">智能估算</span>
+                          {(() => {
+                            const calInfo = getCaloriesInfo(smartGuessResult, estimateQuantity(smartGuessResult).qty)
+                            return calInfo.oilLevel !== 'none' ? (
+                              <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${calInfo.oilColor}`}>
+                                {calInfo.oilEmoji} {calInfo.oilLabel}
+                              </span>
+                            ) : null
+                          })()}
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          {smartGuessResult.ingredients?.join('+')} · {smartGuessResult.cookMethod}烹饪
+                        </div>
+                        <div className="text-xs text-primary-600 font-semibold mt-1">
+                          {(() => {
+                            const { qty } = estimateQuantity(smartGuessResult)
+                            const calInfo = getCaloriesInfo(smartGuessResult, qty)
+                            return `${calInfo.caloriesNoSoup}${calInfo.caloriesWithSoup > calInfo.caloriesNoSoup ? `~${calInfo.caloriesWithSoup}` : ''} kcal`
+                          })()}
+                        </div>
+                      </div>
+                      <span className="text-primary-500 text-lg flex-shrink-0 ml-2">+</span>
+                    </button>
+                  </div>
+                )}
+
                 {searchResults.map((food) => {
                   const { qty, unit } = estimateQuantity(food)
                   const calInfo = getCaloriesInfo(food, qty)
@@ -521,7 +581,23 @@ export default function FoodLog() {
                   )
                 })}
                 {searchResults.length === 0 && (
-                  <p className="text-sm text-gray-400 text-center py-8">没有找到相关食物</p>
+                  <div className="text-center py-8">
+                    <p className="text-sm text-gray-400 mb-4">没有找到相关食物</p>
+                  </div>
+                )}
+
+                {/* 新建菜品入口 */}
+                {searchKeyword && (
+                  <button
+                    onClick={() => {
+                      setCustomForm(prev => ({ ...prev, name: searchKeyword }))
+                      setShowCustomFoodModal(true)
+                    }}
+                    className="w-full flex items-center justify-center gap-2 p-3 border-2 border-dashed border-primary-300 rounded-xl text-primary-500 text-sm hover:bg-primary-50 transition-colors"
+                  >
+                    <span>＋</span>
+                    <span>新建菜品「{searchKeyword}」</span>
+                  </button>
                 )}
               </div>
             </div>
@@ -726,6 +802,148 @@ export default function FoodLog() {
                 className="flex-1 py-3 bg-primary-500 text-white rounded-xl font-semibold active:bg-primary-600"
               >
                 关闭
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 新建菜品弹窗 */}
+      {showCustomFoodModal && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center" onClick={() => setShowCustomFoodModal(false)}>
+          <div
+            className="w-full max-w-md mx-auto bg-white rounded-3xl mx-4 overflow-hidden max-h-[85vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+              <h3 className="text-lg font-bold">➕ 新建菜品</h3>
+              <button onClick={() => setShowCustomFoodModal(false)} className="text-gray-400 text-xl">×</button>
+            </div>
+            <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+              <div>
+                <label className="text-sm text-gray-600 mb-1 block">菜品名称</label>
+                <input
+                  type="text"
+                  value={customForm.name}
+                  onChange={(e) => setCustomForm({ ...customForm, name: e.target.value })}
+                  className="w-full bg-gray-100 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary-300"
+                  placeholder="例如：鹌鹑蛋烧肉"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-sm text-gray-600 mb-1 block">分类</label>
+                  <select
+                    value={customForm.category}
+                    onChange={(e) => setCustomForm({ ...customForm, category: e.target.value })}
+                    className="w-full bg-gray-100 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary-300"
+                  >
+                    <option value="蔬菜">素菜</option>
+                    <option value="肉类">荤菜</option>
+                    <option value="豆制品">豆制品</option>
+                    <option value="蛋奶">蛋奶</option>
+                    <option value="汤类">汤类</option>
+                    <option value="主食">主食</option>
+                    <option value="零食">零食</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-sm text-gray-600 mb-1 block">烹饪方式</label>
+                  <select
+                    value={customForm.cookMethod}
+                    onChange={(e) => setCustomForm({ ...customForm, cookMethod: e.target.value })}
+                    className="w-full bg-gray-100 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary-300"
+                  >
+                    <option value="清炒">清炒</option>
+                    <option value="红烧">红烧</option>
+                    <option value="蒸">清蒸</option>
+                    <option value="炖">炖</option>
+                    <option value="卤">卤制</option>
+                    <option value="干煸">干煸</option>
+                    <option value="水煮">水煮</option>
+                    <option value="干锅">干锅</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="text-sm text-gray-600 mb-1 block">
+                  热量（每100g） <span className="text-primary-500">{customForm.calories} kcal</span>
+                </label>
+                <input
+                  type="range" min="20" max="500" value={customForm.calories}
+                  onChange={(e) => setCustomForm({ ...customForm, calories: Number(e.target.value) })}
+                  className="w-full"
+                />
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">蛋白(g)</label>
+                  <input type="number" value={customForm.protein}
+                    onChange={(e) => setCustomForm({ ...customForm, protein: Number(e.target.value) })}
+                    className="w-full bg-gray-100 rounded-lg px-3 py-2 text-sm outline-none" />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">碳水(g)</label>
+                  <input type="number" value={customForm.carbs}
+                    onChange={(e) => setCustomForm({ ...customForm, carbs: Number(e.target.value) })}
+                    className="w-full bg-gray-100 rounded-lg px-3 py-2 text-sm outline-none" />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">脂肪(g)</label>
+                  <input type="number" value={customForm.fat}
+                    onChange={(e) => setCustomForm({ ...customForm, fat: Number(e.target.value) })}
+                    className="w-full bg-gray-100 rounded-lg px-3 py-2 text-sm outline-none" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">一份分量(g)</label>
+                  <input type="number" value={customForm.qty}
+                    onChange={(e) => setCustomForm({ ...customForm, qty: Number(e.target.value) })}
+                    className="w-full bg-gray-100 rounded-lg px-3 py-2 text-sm outline-none" />
+                </div>
+                <div className="flex items-center gap-2 pt-5">
+                  <input
+                    type="checkbox" id="hasSoup"
+                    checked={customForm.hasSoup}
+                    onChange={(e) => setCustomForm({ ...customForm, hasSoup: e.target.checked })}
+                    className="w-4 h-4"
+                  />
+                  <label htmlFor="hasSoup" className="text-sm text-gray-600">含有汤汁红油</label>
+                </div>
+              </div>
+            </div>
+            <div className="px-5 py-4 border-t border-gray-100 flex gap-3">
+              <button
+                onClick={() => setShowCustomFoodModal(false)}
+                className="flex-1 py-3 bg-gray-100 text-gray-600 rounded-xl font-semibold"
+              >
+                取消
+              </button>
+              <button
+                onClick={() => {
+                  if (!customForm.name.trim()) return
+                  const tags = ['我的菜品', customForm.cookMethod]
+                  if (customForm.hasSoup) tags.push('有汤汁', '重油')
+                  const newFood = {
+                    name: customForm.name.trim(),
+                    category: customForm.category,
+                    calories: customForm.calories,
+                    protein: customForm.protein,
+                    carbs: customForm.carbs,
+                    fat: customForm.fat,
+                    fiber: 1.0,
+                    tags,
+                    price: [15, 30],
+                    servingQty: customForm.qty,
+                  }
+                  const saved = addCustomFood(newFood)
+                  handleSelectFood(saved)
+                  setShowCustomFoodModal(false)
+                }}
+                className="flex-1 py-3 bg-primary-500 text-white rounded-xl font-semibold active:bg-primary-600"
+              >
+                保存并使用
               </button>
             </div>
           </div>
