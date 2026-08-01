@@ -167,12 +167,18 @@ export default function IngredientBreakdownModal({ dishName, onClose, onConfirm 
         onClick={(e) => e.stopPropagation()}
       >
         {/* 头部 */}
-        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white z-10">
-          <div>
+        <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-3 sticky top-0 bg-white z-10">
+          <div className="flex-1 min-w-0">
             <h3 className="text-lg font-bold">🍳 食材拆解估算</h3>
-            <p className="text-xs text-gray-500 mt-0.5">{dishName} · 估算依据见下方</p>
+            <p className="text-xs text-gray-500 mt-0.5 truncate">{dishName} · 估算依据见下方</p>
           </div>
-          <button onClick={onClose} className="text-gray-400 text-2xl w-8 h-8 flex items-center justify-center">×</button>
+          <button
+            onClick={handleConfirm}
+            className="px-4 py-2 bg-primary-500 text-white rounded-xl text-sm font-semibold active:bg-primary-600 flex-shrink-0 shadow-md shadow-primary-500/20"
+          >
+            ✓ 确认
+          </button>
+          <button onClick={onClose} className="text-gray-400 text-2xl w-8 h-8 flex items-center justify-center flex-shrink-0">×</button>
         </div>
 
         <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
@@ -309,24 +315,14 @@ export default function IngredientBreakdownModal({ dishName, onClose, onConfirm 
                 估算依据：{ingredients.map(i => i.name).join(' + ')} + {cookMethod}用油{result.totalOil}g<br />
                 【估算值，实际取决于食材重量与放油多少】
               </div>
+              <button
+                onClick={handleConfirm}
+                className="w-full mt-3 py-2.5 bg-primary-500 text-white rounded-xl text-sm font-semibold active:bg-primary-600"
+              >
+                ✓ 确认使用此估算（{result.solidOnly.calories} kcal）
+              </button>
             </div>
           </div>
-        </div>
-
-        {/* 底部按钮 */}
-        <div className="px-5 py-4 border-t border-gray-100 flex gap-3 bg-white">
-          <button
-            onClick={onClose}
-            className="flex-1 py-3 bg-gray-100 text-gray-600 rounded-xl font-semibold"
-          >
-            取消
-          </button>
-          <button
-            onClick={handleConfirm}
-            className="flex-1 py-3 bg-primary-500 text-white rounded-xl font-semibold active:bg-primary-600"
-          >
-            ✓ 确认使用此估算
-          </button>
         </div>
       </div>
     </div>
