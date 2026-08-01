@@ -8,6 +8,7 @@ import usagiEat from '../assets/07_吃东西的乌萨奇.jpg'
 import usagiShy from '../assets/09_害羞的乌萨奇.jpg'
 import { compressImage, savePhoto, genPhotoId } from '../utils/photoStorage'
 import { getCaloriesInfo, estimateQuantity, OIL_LABELS } from '../utils/calories'
+import IngredientBreakdownModal from '../components/IngredientBreakdownModal'
 
 const mealLabels = {
   breakfast: { icon: '🌅', label: '早餐' },
@@ -64,6 +65,8 @@ export default function FoodLog() {
 
   const [showSmartGuessTip, setShowSmartGuessTip] = useState(false)
   const [smartGuessResult, setSmartGuessResult] = useState(null)
+  const [showBreakdownModal, setShowBreakdownModal] = useState(false)
+  const [breakdownDishName, setBreakdownDishName] = useState('')
   const [showCustomFoodModal, setShowCustomFoodModal] = useState(false)
   const [customForm, setCustomForm] = useState({
     name: '', category: '蔬菜', calories: 100, protein: 5, carbs: 15, fat: 3,
@@ -505,34 +508,32 @@ export default function FoodLog() {
                       🤖 暂无「{searchKeyword}」标准条目，已根据食材组合智能估算：
                     </p>
                     <button
-                      onClick={() => handleSelectFood(smartGuessResult)}
+                      onClick={() => {
+                        setBreakdownDishName(searchKeyword.trim())
+                        setShowBreakdownModal(true)
+                      }}
                       className="w-full flex items-center justify-between p-2 bg-white rounded-lg hover:bg-amber-50 transition-colors text-left"
                     >
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <p className="text-sm font-medium text-gray-800">{smartGuessResult.name}</p>
-                          <span className="text-[10px] px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded-full">智能估算</span>
-                          {(() => {
-                            const calInfo = getCaloriesInfo(smartGuessResult, estimateQuantity(smartGuessResult).qty)
-                            return calInfo.oilLevel !== 'none' ? (
-                              <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${calInfo.oilColor}`}>
-                                {calInfo.oilEmoji} {calInfo.oilLabel}
-                              </span>
-                            ) : null
-                          })()}
+                          <p className="text-sm font-medium text-gray-800">{searchKeyword}</p>
+                          <span className="text-[10px] px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded-full">点我调整食材</span>
                         </div>
                         <div className="text-xs text-gray-500 mt-1">
-                          {smartGuessResult.ingredients?.join('+')} · {smartGuessResult.cookMethod}烹饪
+                          {smartGuessResult.ingredients?.join('+')} · {smartGuessResult.cookMethod}烹饪 · 点击查看详细拆解
                         </div>
                         <div className="text-xs text-primary-600 font-semibold mt-1">
-                          {(() => {
-                            const { qty } = estimateQuantity(smartGuessResult)
-                            const calInfo = getCaloriesInfo(smartGuessResult, qty)
-                            return `${calInfo.caloriesNoSoup}${calInfo.caloriesWithSoup > calInfo.caloriesNoSoup ? `~${calInfo.caloriesWithSoup}` : ''} kcal`
-                          })()}
+                          {smartGuessResult.calories}~{Math.round(smartGuessResult.calories * 1.4)} kcal
+                          <span className="text-gray-400 font-normal ml-1">（可手动调整）</span>
                         </div>
                       </div>
-                      <span className="text-primary-500 text-lg flex-shrink-0 ml-2">+</span>
+                      <span className="text-primary-500 text-lg flex-shrink-0 ml-2">🍳</span>
+                    </button>
+                    <button
+                      onClick={() => handleSelectFood(smartGuessResult)}
+                      className="w-full mt-2 py-2 bg-amber-100 hover:bg-amber-200 text-amber-800 rounded-lg text-xs font-medium transition"
+                    >
+                      直接使用快速估算值（不调整）
                     </button>
                   </div>
                 )}
@@ -948,6 +949,18 @@ export default function FoodLog() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* 食材拆解弹窗 */}
+      {showBreakdownModal && breakdownDishName && (
+        <IngredientBreakdownModal
+          dishName={breakdownDishName}
+          onClose={() => setShowBreakdownModal(false)}
+          onConfirm={(foodData) => {
+            handleSelectFood(foodData)
+            setShowBreakdownModal(false)
+          }}
+        />
       )}
     </div>
   )
