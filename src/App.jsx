@@ -23,21 +23,41 @@ function App() {
   const location = useLocation()
   const navigate = useNavigate()
   const restoreCloudLogin = useStore(s => s.restoreCloudLogin)
+  const syncFromCloud = useStore(s => s.syncFromCloud)
+  const pushDataToCloud = useStore(s => s.pushDataToCloud)
 
   useEffect(() => {
     initCloudBase()
-    window.scrollTo(0, 0)
 
     // 恢复云端登录态到本地 store
     restoreCloudLogin()
 
+    // 如果已登录，从云端拉取同步数据
+    const user = getLoginState()
+    if (user && user.username) {
+      // 延迟一下，确保云开发初始化完成
+      setTimeout(() => {
+        syncFromCloud(user.username)
+      }, 500)
+    }
+
     // 未登录时跳登录页
     const publicPaths = ['/login', '/admin/login', '/admin/dashboard']
-    const user = getLoginState()
     if (!user && !publicPaths.some(p => location.pathname.startsWith(p))) {
       navigate('/login')
     }
-  }, [location.pathname, navigate, restoreCloudLogin])
+
+    // 页面关闭前同步一次到云端
+    const handleBeforeUnload = () => {
+      const currentUser = getLoginState()
+      if (currentUser && currentUser.username) {
+        // 尝试同步（不等待）
+        pushDataToCloud()
+      }
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [location.pathname, navigate, restoreCloudLogin, syncFromCloud, pushDataToCloud])
 
   const showBottomNav =
     !location.pathname.startsWith('/admin') &&

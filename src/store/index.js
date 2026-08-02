@@ -12,6 +12,7 @@ import { getFoodById, FOOD_DATABASE } from '../data/foods'
 import { deletePhoto as deletePhotoFromDB } from '../utils/photoStorage'
 import { generateMockUsers, addAdminLog as addLog, ADMIN_CREDENTIALS } from '../data/adminMock'
 import { clearLoginState as clearCloudLoginState } from '../utils/auth'
+import { pushToCloud, flushPush, pullFromCloud, SYNC_FIELDS } from '../utils/cloudSync'
 
 const useStore = create(
   persist(
@@ -897,10 +898,14 @@ const useStore = create(
         return get().journals
       },
 
-      logoutAccount: () => {
+      logoutAccount: async () => {
         const { currentUser } = get()
         if (currentUser) {
-          // 保存当前数据到该用户名下
+          // 先同步到云端
+          try {
+            await flushPush(currentUser, get())
+          } catch (e) {}
+          // 保存当前数据到该用户名下（本地备份）
           const state = get()
           const data = {
             profile: state.profile,
@@ -911,9 +916,7 @@ const useStore = create(
           }
           try {
             localStorage.setItem(`diet-tracker-user-${currentUser}`, JSON.stringify(data))
-          } catch (e) {
-            console.warn('保存用户数据失败:', e)
-          }
+          } catch (e) {}
         }
         // 清除所有登录状态（云端 + 本地）
         try {
@@ -972,6 +975,45 @@ const useStore = create(
         })
       },
 
+      // ========== 云端数据同步（多设备） ==========
+      // 从云端拉取数据并合并到本地（登录时调用）
+      syncFromCloud: async (userId) => {
+        if (!userId) return false
+        try {
+          const cloudData = await pullFromCloud(userId)
+          if (!cloudData) return false
+
+          const updates = {}
+          let hasUpdates = false
+
+          SYNC_FIELDS.forEach(field => {
+            if (cloudData[field] !== undefined) {
+              updates[field] = cloudData[field]
+              hasUpdates = true
+            }
+          })
+
+          if (hasUpdates) {
+            if (updates.profile) {
+              updates.targets = calcDailyTargets(updates.profile)
+            }
+            set(updates)
+            console.log('✅ 云端数据已同步到本地')
+            return true
+          }
+        } catch (e) {
+          console.warn('从云端同步数据失败:', e)
+        }
+        return false
+      },
+
+      // 立即推送当前数据到云端
+      pushDataToCloud: async () => {
+        const { currentUser } = get()
+        if (!currentUser) return
+        await flushPush(currentUser, get())
+      },
+
       // 从 localStorage 恢复登录态并同步到 store
       restoreCloudLogin: () => {
         try {
@@ -1025,5 +1067,28 @@ const useStore = create(
     }
   )
 )
+
+// ============================================================
+// 自动云端同步：数据变化时自动推送（防抖）
+// ============================================================
+let lastSyncState = null
+
+useStore.subscribe((state, prevState) => {
+  const userId = state.currentUser
+  if (!userId) return
+
+  // 检查是否有需要同步的字段发生变化
+  let changed = false
+  for (const field of SYNC_FIELDS) {
+    if (state[field] !== prevState[field]) {
+      changed = true
+      break
+    }
+  }
+  if (!changed) return
+
+  // 推送数据到云端（防抖）
+  pushToCloud(userId, state)
+})
 
 export default useStore

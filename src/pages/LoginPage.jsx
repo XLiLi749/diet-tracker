@@ -7,6 +7,8 @@ import useStore from '../store'
 export default function LoginPage() {
   const navigate = useNavigate()
   const syncCloudUser = useStore(s => s.syncCloudUser)
+  const syncFromCloud = useStore(s => s.syncFromCloud)
+  const pushDataToCloud = useStore(s => s.pushDataToCloud)
   const [mode, setMode] = useState('login') // login | register
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -51,10 +53,14 @@ export default function LoginPage() {
         })
         saveLoginState(user)
         syncCloudUser(user)
+        // 新用户：把初始数据推送到云端
+        setTimeout(() => pushDataToCloud(), 500)
       } else {
         const user = await loginUser(username.trim(), password)
         saveLoginState(user)
         syncCloudUser(user)
+        // 老用户：从云端拉取已同步的数据
+        setTimeout(() => syncFromCloud(user.username), 200)
       }
       navigate('/')
     } catch (e) {
