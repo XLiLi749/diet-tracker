@@ -1,5 +1,7 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import useStore from '../store'
+import { clearLoginState } from '../utils/auth'
 import { calcBMI, calcIdealWeightRange, calcSuggestedTargetWeight, RATE_LEVELS } from '../data/mock'
 import usagiYellow from '../assets/03_黄色背景乌萨奇.jpg'
 import usagiGlasses from '../assets/04_戴眼镜的乌萨奇.jpg'
@@ -74,6 +76,7 @@ export default function Profile() {
 
   const [editingField, setEditingField] = useState(null) // 行内编辑（仅昵称）
   const [editValue, setEditValue] = useState('')
+  const navigate = useNavigate()
 
   // 各类型弹窗
   const [showGoalPicker, setShowGoalPicker] = useState(false)
@@ -502,6 +505,35 @@ export default function Profile() {
         </div>
       </div>
 
+      {/* 快捷功能 */}
+      <div className="px-4 mt-4">
+        <div className="card">
+          <h3 className="text-sm font-semibold text-gray-700 mb-3">📌 快捷功能</h3>
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              onClick={() => navigate('/journal')}
+              className="flex items-center gap-3 p-4 bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all"
+            >
+              <span className="text-2xl">📔</span>
+              <div className="text-left">
+                <p className="font-medium text-gray-800">手账</p>
+                <p className="text-xs text-gray-500">图文饮食日志</p>
+              </div>
+            </button>
+            <button
+              onClick={() => navigate('/recommend')}
+              className="flex items-center gap-3 p-4 bg-gradient-to-br from-green-50 to-teal-50 rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all"
+            >
+              <span className="text-2xl">🍽️</span>
+              <div className="text-left">
+                <p className="font-medium text-gray-800">推荐</p>
+                <p className="text-xs text-gray-500">健康食谱</p>
+              </div>
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* 设置 */}
       <div className="px-4 mt-4 mb-4">
         <div className="card">
@@ -544,6 +576,25 @@ export default function Profile() {
               </p>
             )}
             <div className="border-t border-gray-100 my-2" />
+
+            {/* 隐私告知 */}
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-3">
+              <p className="text-xs text-amber-800 font-medium mb-1">🔒 隐私告知</p>
+              <p className="text-[11px] text-amber-700 leading-relaxed">
+                您的饮食记录、身体数据将被平台管理员用于产品优化分析。
+                平台严格保护您的个人隐私，管理员不得私自泄露或传播任何用户信息。
+                所有热量数据为估算参考值。
+              </p>
+            </div>
+
+            <button
+              onClick={() => navigate('/admin/login')}
+              className="w-full text-left text-sm text-gray-500 py-2 hover:text-gray-700"
+            >
+              🔑 管理员入口
+            </button>
+
+            <div className="border-t border-gray-100 my-2" />
             <button
               onClick={() => {
                 if (confirm('确定要清空所有饮食和体重记录吗？用户档案（身高、性别等）会保留。')) {
@@ -563,6 +614,18 @@ export default function Profile() {
               className="w-full text-left text-sm text-red-500 py-2"
             >
               🔄 重置为示例数据（恢复初始状态）
+            </button>
+            <div className="border-t border-gray-100 my-2" />
+            <button
+              onClick={() => {
+                if (confirm('确定要退出登录吗？')) {
+                  clearLoginState()
+                  navigate('/login')
+                }
+              }}
+              className="w-full text-left text-sm text-red-500 py-2 font-medium"
+            >
+              🚪 退出登录
             </button>
             <p className="text-xs text-gray-400 pt-2">
               版本 v0.1.0 · 仅供参考，不替代专业医疗建议
