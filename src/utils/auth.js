@@ -6,11 +6,24 @@ import { getDb } from './cloudbase'
 
 // ============================================================
 // 密码哈希（优先 SHA-256，不支持时降级为简单哈希）
+// 登录时会同时尝试两种方式，确保跨设备兼容
 // ============================================================
-const hashPassword = async (password) => {
-  const salted = password + 'diet-tracker-salt-2026'
 
-  // 优先使用浏览器原生 SHA-256
+// 降级哈希（简单字符串哈希，兼容所有浏览器）
+const fallbackHash = (password) => {
+  const salted = password + 'diet-tracker-salt-2026'
+  let hash = 0
+  for (let i = 0; i < salted.length; i++) {
+    const char = salted.charCodeAt(i)
+    hash = ((hash << 5) - hash) + char
+    hash = hash & hash
+  }
+  return 'fallback_' + Math.abs(hash).toString(16).padStart(16, '0') + '_' + salted.length.toString(16)
+}
+
+// SHA-256 哈希（优先）
+const sha256Hash = async (password) => {
+  const salted = password + 'diet-tracker-salt-2026'
   if (typeof crypto !== 'undefined' && crypto.subtle && crypto.subtle.digest) {
     try {
       const encoder = new TextEncoder()
@@ -19,19 +32,30 @@ const hashPassword = async (password) => {
       const hashArray = Array.from(new Uint8Array(hashBuffer))
       return hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
     } catch (e) {
-      console.warn('SHA-256 加密失败，使用降级方案:', e)
+      console.warn('SHA-256 加密失败:', e)
     }
   }
+  return null
+}
 
-  // 降级方案：简单的字符串哈希（兼容所有浏览器）
-  let hash = 0
-  for (let i = 0; i < salted.length; i++) {
-    const char = salted.charCodeAt(i)
-    hash = ((hash << 5) - hash) + char
-    hash = hash & hash
-  }
-  // 转换成固定长度的十六进制字符串
-  return 'fallback_' + Math.abs(hash).toString(16).padStart(16, '0') + '_' + salted.length.toString(16)
+// 对外：生成密码哈希（注册时用）
+const hashPassword = async (password) => {
+  const sha = await sha256Hash(password)
+  if (sha) return sha
+  return fallbackHash(password)
+}
+
+// 对外：验证密码（登录时用，同时尝试两种方式）
+const verifyPassword = async (password, storedHash) => {
+  // 先直接匹配（最常见情况）
+  const sha = await sha256Hash(password)
+  if (sha && sha === storedHash) return true
+
+  // 再试降级哈希
+  const fb = fallbackHash(password)
+  if (fb === storedHash) return true
+
+  return false
 }
 
 // ============================================================
@@ -97,9 +121,9 @@ export const loginUser = async (username, password) => {
   }
 
   const user = result.data[0]
-  const hashedPwd = await hashPassword(password)
+  const passwordOk = await verifyPassword(password, user.password)
 
-  if (user.password !== hashedPwd) {
+  if (!passwordOk) {
     throw new Error('密码错误')
   }
 
@@ -178,4 +202,29 @@ export const getLoginState = () => {
 
 export const clearLoginState = () => {
   localStorage.removeItem(STORAGE_KEY)
+}
+
+// ============================================================
+// 管理员：获取所有注册用户
+// ============================================================
+export const getAllUsersForAdmin = async () => {
+  const db = await getDb()
+  if (!db) throw new Error('云开发未初始化')
+
+  let result
+  try {
+    result = await db.collection('users').limit(1000).get()
+  } catch (e) {
+    console.error('获取用户列表失败:', e)
+    throw new Error('获取用户列表失败，请检查数据库权限')
+  }
+
+  const users = result.data || []
+  return users.map(u => ({
+    userId: u.userId,
+    username: u.username,
+    profile: u.profile,
+    lastLoginAt: u.lastLoginAt,
+    createdAt: u.createdAt,
+  }))
 }

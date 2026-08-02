@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import dayjs from 'dayjs'
 import useStore from '../store'
 import { getAdminLogs } from '../data/adminMock'
+import { getAllUsersForAdmin } from '../utils/auth'
 
 const GOAL_LABEL = { fat_loss: '减脂', muscle_gain: '增肌', weight_gain: '增重', maintain: '维持' }
 const GOAL_COLOR = { fat_loss: 'bg-red-100 text-red-700', muscle_gain: 'bg-blue-100 text-blue-700', weight_gain: 'bg-green-100 text-green-700', maintain: 'bg-gray-100 text-gray-700' }
@@ -10,20 +11,73 @@ const GOAL_COLOR = { fat_loss: 'bg-red-100 text-red-700', muscle_gain: 'bg-blue-
 export default function AdminDashboard() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { adminLoggedIn, adminLogout, ensureMockUsers, logAdminAction } = useStore()
+  const { adminLoggedIn, adminLogout, logAdminAction } = useStore()
   const [search, setSearch] = useState('')
   const [goalFilter, setGoalFilter] = useState('all')
   const [dateRange, setDateRange] = useState({ start: '', end: '' })
   const [showLogs, setShowLogs] = useState(false)
   const [activeTab, setActiveTab] = useState('users')
+  const [users, setUsers] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
   useEffect(() => {
     if (!adminLoggedIn) {
       navigate('/admin/login', { replace: true })
+      return
     }
+    loadUsers()
   }, [adminLoggedIn, navigate])
 
-  const users = ensureMockUsers() || []
+  const loadUsers = async () => {
+    setLoading(true)
+    setError('')
+    try {
+      const rawUsers = await getAllUsersForAdmin()
+      // 转换为后台需要的格式
+      const adapted = rawUsers.map(u => {
+        const p = u.profile || {}
+        const bmi = p.height && p.weight ? (p.weight / ((p.height / 100) ** 2)) : null
+        const goalType = p.goal || 'maintain'
+        const lastLogin = u.lastLoginAt ? dayjs(u.lastLoginAt) : null
+        const created = u.createdAt ? dayjs(u.createdAt) : null
+
+        return {
+          userId: u.userId,
+          username: u.username,
+          profile: {
+            id: u.userId,
+            nickname: u.username,
+            gender: p.gender || '女',
+            age: p.age || 20,
+            height: p.height || 165,
+            weight: p.weight || 55,
+            bmi: bmi,
+            profession: p.activityLevel || 'light',
+            dietGoal: {
+              type: goalType,
+              targetWeight: p.targetWeight || p.weight || 55,
+            },
+            targets: {
+              calorieTarget: p.dailyCalorieTarget || null,
+            },
+            createdAt: u.createdAt || new Date().toISOString(),
+          },
+          stats: {
+            isActiveToday: lastLogin ? lastLogin.isSame(dayjs(), 'day') : false,
+            activeDays7: created ? Math.min(7, dayjs().diff(created, 'day') + 1) : 1,
+            totalLogDays: 0,
+          },
+          logs: [],
+        }
+      })
+      setUsers(adapted)
+    } catch (e) {
+      setError(e.message || '加载失败')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   // 统计数据
   const stats = useMemo(() => {
@@ -177,6 +231,32 @@ export default function AdminDashboard() {
       <main className="max-w-7xl mx-auto px-6 py-6">
         {activeTab === 'users' && (
           <div className="space-y-6">
+            {error && (
+              <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+                <p className="text-red-700 text-sm">⚠️ {error}</p>
+                <button
+                  onClick={loadUsers}
+                  className="mt-2 text-xs text-red-600 font-medium hover:text-red-800"
+                >
+                  点击重试
+                </button>
+              </div>
+            )}
+            {loading && (
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                <p className="text-blue-700 text-sm">⏳ 正在加载用户数据...</p>
+              </div>
+            )}
+
+            <div className="flex justify-end">
+              <button
+                onClick={loadUsers}
+                className="text-xs text-gray-500 hover:text-gray-700 transition"
+              >
+                🔄 刷新数据
+              </button>
+            </div>
+
             {/* 总览面板 */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {[
