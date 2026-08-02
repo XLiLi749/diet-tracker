@@ -36,6 +36,49 @@ export default function FeedPage() {
   const [shareWithGoal, setShareWithGoal] = useState(true)
   const [shareWithStreak, setShareWithStreak] = useState(true)
   const [shareContent, setShareContent] = useState('')
+  const [hasEditedShareContent, setHasEditedShareContent] = useState(false)
+
+  // 生成自动分享文案
+  const generateAutoShareContent = () => {
+    const goalInfo = getGoalInfoByDate(shareDate)
+    const records = getRecordsByDate(shareDate)
+    const streak = getStreakDays()
+    const isToday = shareDate === dayjs().format('YYYY-MM-DD')
+    const isYesterday = shareDate === dayjs().subtract(1, 'day').format('YYYY-MM-DD')
+    const dateLabel = isToday ? '今天' : isYesterday ? '昨天' : shareDate
+
+    if (shareType === 'goal') {
+      return goalInfo.achieved
+        ? `${dateLabel}完美达成${goalInfo.goalLabel}目标！🔥 已连续 ${streak} 天达成，继续保持！`
+        : `${dateLabel}的${goalInfo.goalLabel}目标还未达成，明天继续加油～💪`
+    }
+    let base = `${dateLabel}吃了 ${records.length} 餐，共 ${goalInfo.totalCalories} kcal`
+    if (shareWithGoal) {
+      base += goalInfo.achieved
+        ? `，完美达成${goalInfo.goalLabel}目标！🔥`
+        : `，继续向${goalInfo.goalLabel}目标迈进～💪`
+    } else {
+      base += '，吃得很满足～'
+    }
+    if (shareWithStreak && streak > 0) {
+      base += ` 已连续 ${streak} 天达成目标！`
+    }
+    return base
+  }
+
+  // 当分享选项变化时，如果用户没有手动编辑过，自动更新文案
+  useEffect(() => {
+    if (!hasEditedShareContent) {
+      setShareContent(generateAutoShareContent())
+    }
+  }, [shareType, shareDate, shareWithGoal, shareWithStreak, showShareModal])
+
+  // 打开分享弹窗时重置编辑状态
+  const openShareModal = () => {
+    setHasEditedShareContent(false)
+    setShareContent('')
+    setShowShareModal(true)
+  }
 
   useEffect(() => {
     const user = getLoginState()
@@ -149,8 +192,7 @@ export default function FeedPage() {
     setShareType('diet')
     setShareWithGoal(true)
     setShareWithStreak(true)
-    setShareContent('')
-    setShowShareModal(true)
+    openShareModal()
   }
 
   // 执行分享发布
@@ -491,13 +533,24 @@ export default function FeedPage() {
       {/* ========== 分享选择弹窗 ========== */}
       {showShareModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-end md:items-center">
-          <div className="w-full max-w-lg mx-auto bg-white rounded-t-3xl overflow-hidden max-h-[90vh] overflow-y-auto">
-            <div className="p-4 flex justify-between items-center border-b sticky top-0 bg-white">
+          <div className="w-full max-w-lg mx-auto bg-white rounded-t-3xl overflow-hidden max-h-[85vh] flex flex-col">
+            {/* 标题栏：带分享按钮 */}
+            <div className="p-4 flex justify-between items-center border-b sticky top-0 bg-white z-10">
               <h3 className="text-lg font-bold">📤 分享到好友动态</h3>
-              <button onClick={() => setShowShareModal(false)} className="text-gray-400 text-2xl">×</button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={doSharePost}
+                  disabled={loading || getRecordsByDate(shareDate).length === 0}
+                  className="px-4 py-2 bg-gradient-to-r from-amber-400 to-orange-400 text-white text-sm font-bold rounded-full disabled:opacity-50 active:scale-95 transition-transform"
+                >
+                  {loading ? '发布中...' : '🚀 分享'}
+                </button>
+                <button onClick={() => setShowShareModal(false)} className="text-gray-400 text-2xl w-8 h-8 flex items-center justify-center">×</button>
+              </div>
             </div>
 
-            <div className="p-4 space-y-4">
+            {/* 内容区域 */}
+            <div className="p-4 space-y-4 overflow-y-auto flex-1">
               {/* 分享类型选择 */}
               <div>
                 <p className="text-sm font-semibold text-gray-700 mb-2">选择分享内容</p>
@@ -584,53 +637,36 @@ export default function FeedPage() {
                 </label>
               </div>
 
-              {/* 预览 */}
+              {/* 可编辑的预览文案 */}
               <div className="bg-gray-50 rounded-xl p-3">
-                <p className="text-xs text-gray-400 mb-2">📋 预览文案</p>
-                <p className="text-sm text-gray-700">
-                  {(() => {
-                    const goalInfo = getGoalInfoByDate(shareDate)
-                    const records = getRecordsByDate(shareDate)
-                    const streak = getStreakDays()
-                    const isToday = shareDate === dayjs().format('YYYY-MM-DD')
-                    const isYesterday = shareDate === dayjs().subtract(1, 'day').format('YYYY-MM-DD')
-                    const dateLabel = isToday ? '今天' : isYesterday ? '昨天' : shareDate
-
-                    if (shareType === 'goal') {
-                      return goalInfo.achieved
-                        ? `${dateLabel}完美达成${goalInfo.goalLabel}目标！🔥 已连续 ${streak} 天达成，继续保持！`
-                        : `${dateLabel}的${goalInfo.goalLabel}目标还未达成，明天继续加油～💪`
-                    }
-                    let base = `${dateLabel}吃了 ${records.length} 餐，共 ${goalInfo.totalCalories} kcal`
-                    if (shareWithGoal) {
-                      base += goalInfo.achieved
-                        ? `，完美达成${goalInfo.goalLabel}目标！🔥`
-                        : `，继续向${goalInfo.goalLabel}目标迈进～💪`
-                    }
-                    if (shareWithStreak && streak > 0) {
-                      base += ` 已连续 ${streak} 天达成目标！`
-                    }
-                    return base
-                  })()}
-                </p>
+                <div className="flex justify-between items-center mb-2">
+                  <p className="text-xs text-gray-400">
+                    📋 {hasEditedShareContent ? '已手动编辑' : '预览文案（可直接修改）'}
+                  </p>
+                  {hasEditedShareContent && (
+                    <button
+                      onClick={() => {
+                        setHasEditedShareContent(false)
+                        setShareContent(generateAutoShareContent())
+                      }}
+                      className="text-xs text-amber-600 font-medium hover:text-amber-700"
+                    >
+                      ↺ 重置为自动生成
+                    </button>
+                  )}
+                </div>
+                <textarea
+                  value={shareContent}
+                  onChange={(e) => {
+                    setShareContent(e.target.value)
+                    setHasEditedShareContent(true)
+                  }}
+                  rows={4}
+                  className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:border-amber-400 outline-none resize-none text-sm bg-white"
+                  placeholder="写点想分享的内容..."
+                />
               </div>
 
-              {/* 自定义文案 */}
-              <textarea
-                value={shareContent}
-                onChange={(e) => setShareContent(e.target.value)}
-                placeholder="说点什么（选填，不填使用自动生成的文案）"
-                rows={2}
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-amber-400 outline-none resize-none text-sm"
-              />
-
-              <button
-                onClick={doSharePost}
-                disabled={loading || getRecordsByDate(shareDate).length === 0}
-                className="w-full py-4 bg-gradient-to-r from-amber-400 to-orange-400 text-white font-bold rounded-xl disabled:opacity-50"
-              >
-                {loading ? '发布中...' : '🚀 立即分享'}
-              </button>
               {getRecordsByDate(shareDate).length === 0 && (
                 <p className="text-xs text-gray-400 text-center">这一天还没有饮食记录哦</p>
               )}
