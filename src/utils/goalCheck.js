@@ -55,3 +55,37 @@ export const getYesterdayStr = () => {
 export const getTodayStr = () => {
   return new Date().toISOString().slice(0, 10)
 }
+
+// 计算连续达成目标的天数
+export const calcGoalStreak = (foodLogs, targetCalories, goalType) => {
+  if (!foodLogs) return 0
+  let streak = 0
+  const today = new Date()
+  for (let i = 0; i < 365; i++) {
+    const d = new Date(today)
+    d.setDate(today.getDate() - i)
+    const dateStr = d.toISOString().slice(0, 10)
+    const dayLogs = foodLogs[dateStr] || []
+    if (dayLogs.length === 0) {
+      // 今天还没有记录不算断档，往前继续找
+      if (i === 0) continue
+      break
+    }
+    const records = []
+    dayLogs.forEach(log => {
+      (log.items || []).forEach(item => {
+        records.push({ ...item, mealType: log.mealType })
+      })
+    })
+    const totalCalories = records.reduce((s, r) => s + (r.calories || 0), 0)
+    const result = checkGoalAchieved(totalCalories, targetCalories, goalType, records)
+    if (result.achieved) {
+      streak++
+    } else {
+      // 今天还没结束，不达成不算断档
+      if (i === 0) continue
+      break
+    }
+  }
+  return streak
+}

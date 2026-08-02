@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import useStore from '../store'
 import { clearLoginState } from '../utils/auth'
 import { calcBMI, calcIdealWeightRange, calcSuggestedTargetWeight, RATE_LEVELS } from '../data/mock'
+import { savePhoto, compressImage, genPhotoId, getPhoto } from '../utils/photoStorage'
 import usagiYellow from '../assets/03_黄色背景乌萨奇.jpg'
 import usagiGlasses from '../assets/04_戴眼镜的乌萨奇.jpg'
 import usagiSleep from '../assets/05_戴睡帽的乌萨奇.jpg'
@@ -77,6 +78,43 @@ export default function Profile() {
   const [editingField, setEditingField] = useState(null) // 行内编辑（仅昵称）
   const [editValue, setEditValue] = useState('')
   const navigate = useNavigate()
+
+  // 头像
+  const [avatarUrl, setAvatarUrl] = useState(null)
+
+  // 加载已保存的头像
+  useEffect(() => {
+    if (profile.avatar) {
+      getPhoto(profile.avatar).then(url => {
+        if (url) setAvatarUrl(url)
+      })
+    }
+  }, [profile.avatar])
+
+  // 处理头像上传
+  const handleAvatarUpload = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    try {
+      const reader = new FileReader()
+      reader.onload = async (ev) => {
+        const dataUrl = ev.target?.result
+        if (typeof dataUrl !== 'string') return
+        // 压缩图片
+        const compressed = await compressImage(dataUrl, 512, 0.85)
+        // 保存到 IndexedDB
+        const photoId = genPhotoId()
+        await savePhoto(photoId, compressed)
+        // 更新 profile
+        updateProfile({ avatar: photoId })
+        setAvatarUrl(compressed)
+      }
+      reader.readAsDataURL(file)
+    } catch (err) {
+      console.warn('头像上传失败:', err)
+    }
+    e.target.value = ''
+  }
 
   // 各类型弹窗
   const [showGoalPicker, setShowGoalPicker] = useState(false)
@@ -204,11 +242,27 @@ export default function Profile() {
         <div className="absolute left-16 bottom-6 w-3 h-3 rounded-full bg-white/60" />
         <h1 className="text-xl font-bold text-gray-800 relative z-10">👤 我的</h1>
         <div className="flex items-center gap-4 mt-5 relative z-10">
-          <div
-            className="w-20 h-20 rounded-full overflow-hidden border-4 border-white shadow-cute cursor-pointer flex-shrink-0"
-            onClick={() => setShowGenderPicker(true)}
-          >
-            <img src={usagiYellow} alt="乌萨奇" className="w-full h-full object-cover" />
+          {/* 头像（支持点击上传） */}
+          <div className="relative">
+            <label className="w-20 h-20 rounded-full overflow-hidden border-4 border-white shadow-cute cursor-pointer flex-shrink-0 block">
+              <img
+                src={avatarUrl || usagiYellow}
+                alt="头像"
+                className="w-full h-full object-cover"
+              />
+            </label>
+            {/* 相机图标覆盖层 */}
+            <div className="absolute -bottom-1 -right-1 w-7 h-7 bg-amber-400 rounded-full border-2 border-white flex items-center justify-center cursor-pointer shadow">
+              <span className="text-white text-xs">📷</span>
+            </div>
+            {/* 隐形文件输入（支持拍照+相册） */}
+            <input
+              type="file"
+              accept="image/*"
+              capture="environment"
+              onChange={handleAvatarUpload}
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+            />
           </div>
           <div className="flex-1">
             {editingField === 'nickname' ? (

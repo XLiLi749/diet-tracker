@@ -10,7 +10,7 @@ import {
   addComment,
   deleteFeed,
 } from '../utils/feed'
-import { checkGoalAchieved } from '../utils/goalCheck'
+import { checkGoalAchieved, calcGoalStreak } from '../utils/goalCheck'
 import useStore from '../store'
 
 export default function FeedPage() {
@@ -27,6 +27,15 @@ export default function FeedPage() {
   const [message, setMessage] = useState('')
   const [commentMap, setCommentMap] = useState({}) // feedId -> input value
   const [showComments, setShowComments] = useState({}) // feedId -> true/false
+  const [expandedFeeds, setExpandedFeeds] = useState({}) // feedId -> true/false
+
+  // 分享弹窗状态
+  const [showShareModal, setShowShareModal] = useState(false)
+  const [shareType, setShareType] = useState('diet') // diet | goal | both
+  const [shareDate, setShareDate] = useState(dayjs().format('YYYY-MM-DD'))
+  const [shareWithGoal, setShareWithGoal] = useState(true)
+  const [shareWithStreak, setShareWithStreak] = useState(true)
+  const [shareContent, setShareContent] = useState('')
 
   useEffect(() => {
     const user = getLoginState()
@@ -50,11 +59,12 @@ export default function FeedPage() {
     }
   }
 
-  const getTodayRecords = () => {
+  const getTodayRecords = () => getRecordsByDate(dayjs().format('YYYY-MM-DD'))
+
+  // 按日期获取饮食记录
+  const getRecordsByDate = (dateStr) => {
     try {
-      const today = dayjs().format('YYYY-MM-DD')
-      const dayLogs = useStore.getState().foodLogs[today] || []
-      // 展开所有 items，合并成一条条食物记录
+      const dayLogs = useStore.getState().foodLogs[dateStr] || []
       const records = []
       dayLogs.forEach(log => {
         (log.items || []).forEach(item => {
@@ -71,6 +81,23 @@ export default function FeedPage() {
     } catch {
       return []
     }
+  }
+
+  // 计算指定日期的目标达成情况
+  const getGoalInfoByDate = (dateStr) => {
+    const records = getRecordsByDate(dateStr)
+    const totalCalories = records.reduce((s, r) => s + (r.calories || 0), 0)
+    const targetCalories = targets?.calorieTarget || 2000
+    const goalType = profile?.dietGoal?.type || 'maintain'
+    return checkGoalAchieved(totalCalories, targetCalories, goalType, records)
+  }
+
+  // 获取连续达成天数
+  const getStreakDays = () => {
+    const foodLogs = useStore.getState().foodLogs
+    const targetCalories = targets?.calorieTarget || 2000
+    const goalType = profile?.dietGoal?.type || 'maintain'
+    return calcGoalStreak(foodLogs, targetCalories, goalType)
   }
 
   // 计算今日目标达成情况
@@ -116,21 +143,67 @@ export default function FeedPage() {
     }
   }
 
-  // 一键分享今日饮食（不需要写文字）
-  const handleQuickPost = async () => {
-    const records = getTodayRecords()
-    if (records.length === 0) {
-      setMessage('今天还没有记录饮食哦，先去记录吧~')
-      setTimeout(() => setMessage(''), 3000)
-      return
-    }
+  // 一键分享 → 打开分享选择弹窗
+  const handleQuickPost = () => {
+    setShareDate(dayjs().format('YYYY-MM-DD'))
+    setShareType('diet')
+    setShareWithGoal(true)
+    setShareWithStreak(true)
+    setShareContent('')
+    setShowShareModal(true)
+  }
+
+  // 执行分享发布
+  const doSharePost = async () => {
     setLoading(true)
     try {
-      const goalInfo = getTodayGoalInfo()
-      const defaultText = goalInfo.achieved
-        ? `今天吃了 ${records.length} 餐，共 ${goalInfo.totalCalories} kcal，完美达成目标！💪`
-        : `今天吃了 ${records.length} 餐，共 ${goalInfo.totalCalories} kcal，继续加油～`
-      await doPost(defaultText, true)
+      const records = getRecordsByDate(shareDate)
+      const goalInfo = getGoalInfoByDate(shareDate)
+      const streak = getStreakDays()
+      const isToday = shareDate === dayjs().format('YYYY-MM-DD')
+      const isYesterday = shareDate === dayjs().subtract(1, 'day').format('YYYY-MM-DD')
+      const dateLabel = isToday ? '今天' : isYesterday ? '昨天' : shareDate
+
+      let content = shareContent.trim()
+      if (!content) {
+        if (shareType === 'goal') {
+          // 只分享目标达成
+          content = goalInfo.achieved
+            ? `${dateLabel}完美达成${goalInfo.goalLabel}目标！🔥 已连续 ${streak} 天达成，继续保持！`
+            : `${dateLabel}的${goalInfo.goalLabel}目标还未达成，明天继续加油～💪`
+        } else {
+          // 分享饮食（+ 目标达成）
+          const totalCals = goalInfo.totalCalories
+          let base = `${dateLabel}吃了 ${records.length} 餐，共 ${totalCals} kcal`
+          if (shareWithGoal) {
+            base += goalInfo.achieved
+              ? `，完美达成${goalInfo.goalLabel}目标！🔥`
+              : `，继续向${goalInfo.goalLabel}目标迈进～💪`
+          } else {
+            base += '，吃得很满足～'
+          }
+          if (shareWithStreak && streak > 0) {
+            base += ` 已连续 ${streak} 天达成目标！`
+          }
+          content = base
+        }
+      }
+
+      await postFeed(
+        currentUser.userId,
+        currentUser.username,
+        content,
+        records,
+        'friends',
+        shareWithGoal ? {
+          goalReached: goalInfo.achieved,
+          targetCalories: goalInfo.targetCalories,
+          streakDays: streak,
+          shareDate,
+        } : { shareDate },
+      )
+
+      setShowShareModal(false)
       loadFeed(currentUser.userId)
       setMessage('分享成功！')
       setTimeout(() => setMessage(''), 3000)
@@ -256,39 +329,55 @@ export default function FeedPage() {
                   <p className="text-gray-700">{feed.content}</p>
                 </div>
 
-                {/* 目标达成标识 */}
+                {/* 目标达成标识 + 连续天数 */}
                 {feed.goalReached !== null && feed.goalReached !== undefined && (
                   <div className={`mx-4 mb-2 px-3 py-2 rounded-xl text-sm flex items-center gap-2 ${
                   feed.goalReached ? 'bg-green-50 text-green-600' : 'bg-gray-50 text-gray-500'
                 }`}>
                   <span className="text-lg">{feed.goalReached ? '🏆' : '💪'}</span>
-                  <span>
-                    {feed.goalReached ? '今日热量目标已达成！' : '今日继续加油，向目标迈进'}
-                    {feed.targetCalories && <span className="opacity-70 ml-1">（目标 {feed.targetCalories} kcal）</span>}
-                  </span>
+                  <div className="flex-1">
+                    <span>
+                      {feed.goalReached ? '热量目标已达成！' : '继续加油，向目标迈进'}
+                      {feed.targetCalories && <span className="opacity-70 ml-1">（目标 {feed.targetCalories} kcal）</span>}
+                    </span>
+                    {feed.streakDays > 0 && (
+                      <div className="text-[11px] mt-0.5 text-amber-600">
+                        🔥 已连续 {feed.streakDays} 天达成目标
+                      </div>
+                    )}
+                  </div>
                 </div>
                 )}
 
-                {/* 饮食记录 */}
+                {/* 饮食记录（支持展开/收起） */}
                 {feed.records && feed.records.length > 0 && (
                   <div className="mx-4 mb-3 bg-amber-50 rounded-xl p-3">
                     <div className="flex justify-between items-center mb-2">
-                      <span className="text-xs text-amber-600 font-medium">今日饮食</span>
+                      <span className="text-xs text-amber-600 font-medium">
+                        {feed.shareDate && feed.shareDate !== dayjs().format('YYYY-MM-DD')
+                          ? `${feed.shareDate} 饮食`
+                          : '今日饮食'}
+                      </span>
                       <span className="text-xs text-gray-500">
                         共 {feed.records.length} 餐 · {feed.summary?.totalCalories || 0} kcal
                       </span>
                     </div>
                     <div className="space-y-1">
-                      {feed.records.slice(0, 5).map((r, i) => (
+                      {(expandedFeeds[feed.id] ? feed.records : feed.records.slice(0, 5)).map((r, i) => (
                         <div key={i} className="flex justify-between text-sm">
                           <span className="text-gray-600">{r.name}</span>
                           <span className="text-amber-600 font-medium">{r.calories} kcal</span>
                         </div>
                       ))}
                       {feed.records.length > 5 && (
-                        <div className="text-xs text-gray-400 text-center pt-1">
-                          还有 {feed.records.length - 5} 条...
-                        </div>
+                        <button
+                          onClick={() => setExpandedFeeds({ ...expandedFeeds, [feed.id]: !expandedFeeds[feed.id] })}
+                          className="w-full text-xs text-amber-600 text-center pt-2 font-medium hover:text-amber-700"
+                        >
+                          {expandedFeeds[feed.id]
+                            ? '▲ 收起'
+                            : `▼ 展开查看剩余 ${feed.records.length - 5} 道菜`}
+                        </button>
                       )}
                     </div>
                   </div>
@@ -394,6 +483,157 @@ export default function FeedPage() {
               >
                 {loading ? '发布中...' : '发布动态'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========== 分享选择弹窗 ========== */}
+      {showShareModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-end md:items-center">
+          <div className="w-full max-w-lg mx-auto bg-white rounded-t-3xl overflow-hidden max-h-[90vh] overflow-y-auto">
+            <div className="p-4 flex justify-between items-center border-b sticky top-0 bg-white">
+              <h3 className="text-lg font-bold">📤 分享到好友动态</h3>
+              <button onClick={() => setShowShareModal(false)} className="text-gray-400 text-2xl">×</button>
+            </div>
+
+            <div className="p-4 space-y-4">
+              {/* 分享类型选择 */}
+              <div>
+                <p className="text-sm font-semibold text-gray-700 mb-2">选择分享内容</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => setShareType('diet')}
+                    className={`p-3 rounded-xl text-left transition-all ${
+                      shareType === 'diet'
+                        ? 'bg-amber-50 border-2 border-amber-400'
+                        : 'bg-gray-50 border-2 border-transparent'
+                    }`}
+                  >
+                    <div className="text-xl mb-1">🍽️</div>
+                    <p className="text-sm font-medium">饮食分享</p>
+                    <p className="text-[11px] text-gray-500">分享某天吃了什么</p>
+                  </button>
+                  <button
+                    onClick={() => setShareType('goal')}
+                    className={`p-3 rounded-xl text-left transition-all ${
+                      shareType === 'goal'
+                        ? 'bg-amber-50 border-2 border-amber-400'
+                        : 'bg-gray-50 border-2 border-transparent'
+                    }`}
+                  >
+                    <div className="text-xl mb-1">🎯</div>
+                    <p className="text-sm font-medium">目标达成</p>
+                    <p className="text-[11px] text-gray-500">分享目标达成 & 连续天数</p>
+                  </button>
+                </div>
+              </div>
+
+              {/* 日期选择（饮食分享时） */}
+              {shareType === 'diet' && (
+                <div>
+                  <p className="text-sm font-semibold text-gray-700 mb-2">选择日期</p>
+                  <div className="flex gap-2 flex-wrap">
+                    {[0, 1, 2, 3, 4, 5, 6].map(offset => {
+                      const d = dayjs().subtract(offset, 'day')
+                      const dateStr = d.format('YYYY-MM-DD')
+                      const label = offset === 0 ? '今天' : offset === 1 ? '昨天' : d.format('MM/DD')
+                      const recs = getRecordsByDate(dateStr)
+                      return (
+                        <button
+                          key={offset}
+                          onClick={() => setShareDate(dateStr)}
+                          className={`px-3 py-2 rounded-xl text-sm transition-all ${
+                            shareDate === dateStr
+                              ? 'bg-amber-400 text-white'
+                              : recs.length > 0
+                                ? 'bg-gray-100 text-gray-700'
+                                : 'bg-gray-50 text-gray-300'
+                          }`}
+                        >
+                          {label}
+                          {recs.length > 0 && <span className="ml-1 text-[10px]">({recs.length})</span>}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* 附加选项 */}
+              <div className="bg-amber-50 rounded-xl p-3 space-y-2">
+                {shareType === 'diet' && (
+                  <label className="flex items-center gap-2 text-sm text-gray-600">
+                    <input
+                      type="checkbox"
+                      checked={shareWithGoal}
+                      onChange={(e) => setShareWithGoal(e.target.checked)}
+                      className="w-4 h-4 accent-amber-500"
+                    />
+                    同时展示{shareDate === dayjs().format('YYYY-MM-DD') ? '今日' : shareDate === dayjs().subtract(1, 'day').format('YYYY-MM-DD') ? '昨日' : '当日'}目标达成情况
+                  </label>
+                )}
+                <label className="flex items-center gap-2 text-sm text-gray-600">
+                  <input
+                    type="checkbox"
+                    checked={shareWithStreak}
+                    onChange={(e) => setShareWithStreak(e.target.checked)}
+                    className="w-4 h-4 accent-amber-500"
+                  />
+                  展示已连续达成目标天数（{getStreakDays()} 天）
+                </label>
+              </div>
+
+              {/* 预览 */}
+              <div className="bg-gray-50 rounded-xl p-3">
+                <p className="text-xs text-gray-400 mb-2">📋 预览文案</p>
+                <p className="text-sm text-gray-700">
+                  {(() => {
+                    const goalInfo = getGoalInfoByDate(shareDate)
+                    const records = getRecordsByDate(shareDate)
+                    const streak = getStreakDays()
+                    const isToday = shareDate === dayjs().format('YYYY-MM-DD')
+                    const isYesterday = shareDate === dayjs().subtract(1, 'day').format('YYYY-MM-DD')
+                    const dateLabel = isToday ? '今天' : isYesterday ? '昨天' : shareDate
+
+                    if (shareType === 'goal') {
+                      return goalInfo.achieved
+                        ? `${dateLabel}完美达成${goalInfo.goalLabel}目标！🔥 已连续 ${streak} 天达成，继续保持！`
+                        : `${dateLabel}的${goalInfo.goalLabel}目标还未达成，明天继续加油～💪`
+                    }
+                    let base = `${dateLabel}吃了 ${records.length} 餐，共 ${goalInfo.totalCalories} kcal`
+                    if (shareWithGoal) {
+                      base += goalInfo.achieved
+                        ? `，完美达成${goalInfo.goalLabel}目标！🔥`
+                        : `，继续向${goalInfo.goalLabel}目标迈进～💪`
+                    }
+                    if (shareWithStreak && streak > 0) {
+                      base += ` 已连续 ${streak} 天达成目标！`
+                    }
+                    return base
+                  })()}
+                </p>
+              </div>
+
+              {/* 自定义文案 */}
+              <textarea
+                value={shareContent}
+                onChange={(e) => setShareContent(e.target.value)}
+                placeholder="说点什么（选填，不填使用自动生成的文案）"
+                rows={2}
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-amber-400 outline-none resize-none text-sm"
+              />
+
+              <button
+                onClick={doSharePost}
+                disabled={loading || getRecordsByDate(shareDate).length === 0}
+                className="w-full py-4 bg-gradient-to-r from-amber-400 to-orange-400 text-white font-bold rounded-xl disabled:opacity-50"
+              >
+                {loading ? '发布中...' : '🚀 立即分享'}
+              </button>
+              {getRecordsByDate(shareDate).length === 0 && (
+                <p className="text-xs text-gray-400 text-center">这一天还没有饮食记录哦</p>
+              )}
             </div>
           </div>
         </div>

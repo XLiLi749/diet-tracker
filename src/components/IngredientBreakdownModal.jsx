@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react'
-import { analyzeDish, COOK_METHOD_MAP, INGREDIENT_CATEGORIES } from '../utils/ingredientParser'
-import { INGREDIENT_DATABASE } from '../data/ingredients'
+import { analyzeDish, COOK_METHOD_MAP } from '../utils/ingredientParser'
+import { INGREDIENT_DATABASE, INGREDIENT_CATEGORIES } from '../data/ingredients'
 
 /**
  * 食材拆解弹窗组件

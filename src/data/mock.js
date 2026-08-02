@@ -117,6 +117,33 @@ const ACTIVITY_FACTOR = {
   daily: 1.9,
 }
 
+// 职业活动系数加成（不同职业的日常消耗差异）
+const PROFESSION_FACTOR = {
+  student: 1.05,        // 学生：走路+体育课，轻度活动
+  office_worker: 0.95,  // 办公室职员：久坐为主
+  teacher: 1.10,        // 教师：站立授课，中度活动
+  doctor: 1.15,         // 医护人员：走动频繁，中高度活动
+  engineer: 0.95,       // 工程师/程序员：久坐
+  designer: 0.95,       // 设计师：久坐为主
+  freelancer: 1.00,     // 自由职业者：活动量不定
+  business: 1.05,       // 创业者/企业主：中等活动
+  athlete: 1.30,        // 运动员/健身教练：高度活动
+  retired: 0.90,        // 退休人员：活动量较低
+  homemaker: 1.10,      // 家庭主妇/主夫：家务劳动
+  other: 1.00,          // 其他：默认
+}
+
+// 年龄代谢系数（基础代谢随年龄增长而下降）
+const AGE_FACTOR = (age) => {
+  if (age <= 18) return 1.05    // 青少年：代谢旺盛
+  if (age <= 25) return 1.02    // 青年早期
+  if (age <= 35) return 1.00    // 青年
+  if (age <= 45) return 0.98    // 中年早期
+  if (age <= 55) return 0.95    // 中年
+  if (age <= 65) return 0.92    // 中老年
+  return 0.88                     // 老年
+}
+
 // 速率档位配置
 export const RATE_LEVELS = {
   gentle: {
@@ -147,11 +174,17 @@ const MIN_INTAKE = {
 const MAX_DEFICIT = 700
 const MAX_SURPLUS = 700
 
-// 计算每日营养目标（严格遵循健康速率标准）
+// 计算每日营养目标（严格遵循健康速率标准，综合职业、年龄、性别）
 export const calcDailyTargets = (profile) => {
-  const { gender, weight, height, age, dietGoal, lifestyle } = profile
-  const bmr = calcBMR(gender, weight, height, age)
-  const tdee = bmr * (ACTIVITY_FACTOR[lifestyle.exerciseFrequency] || 1.375)
+  const { gender, weight, height, age, dietGoal, lifestyle, identity } = profile
+  const rawBmr = calcBMR(gender, weight, height, age)
+  // 应用年龄代谢系数修正BMR
+  const ageFactor = AGE_FACTOR(age || 25)
+  const bmr = Math.round(rawBmr * ageFactor)
+  // 应用运动系数 + 职业系数
+  const exerciseFactor = ACTIVITY_FACTOR[lifestyle.exerciseFrequency] || 1.375
+  const professionFactor = PROFESSION_FACTOR[identity] || 1.0
+  const tdee = bmr * exerciseFactor * professionFactor
 
   // 获取速率档位（BMI偏低时自动用温和档）
   const currentBMI = parseFloat(calcBMI(weight, height))
@@ -212,6 +245,10 @@ export const calcDailyTargets = (profile) => {
 
   return {
     bmr,
+    rawBmr,
+    ageFactor,
+    professionFactor,
+    exerciseFactor,
     tdee: Math.round(tdee),
     calorieTarget,
     proteinTarget,
