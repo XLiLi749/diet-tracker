@@ -174,6 +174,22 @@ export const INGREDIENT_DATABASE = [
   { id: 'ing_almond', name: '杏仁', category: 'dairy', alias: [], calories: 579, protein: 22.5, fat: 51.0, carbs: 23.0 },
   { id: 'ing_soybean', name: '黄豆（大豆）', category: 'dairy', alias: [], calories: 359, protein: 35.1, fat: 16.0, carbs: 34.2 },
   { id: 'ing_cheese', name: '奶酪', category: 'dairy', alias: ['芝士'], calories: 328, protein: 25.7, fat: 23.5, carbs: 3.5 },
+
+  // ============ 面点馅料及半成品 ============
+  { id: 'ing_red_bean_paste', name: '红豆沙', category: 'filling', alias: ['豆沙'], calories: 240, protein: 4.5, fat: 2.0, carbs: 52.0 },
+  { id: 'ing_pork_minced', name: '猪肉馅（肥瘦）', category: 'filling', alias: ['猪肉馅', '肉馅', '肉末'], calories: 290, protein: 13.0, fat: 25.0, carbs: 2.0 },
+  { id: 'ing_cabbage_minced', name: '白菜馅', category: 'filling', alias: ['白菜碎'], calories: 30, protein: 1.2, fat: 0.3, carbs: 5.5 },
+  { id: 'ing_chives_filling', name: '韭菜馅', category: 'filling', alias: ['韭菜碎'], calories: 45, protein: 1.8, fat: 0.6, carbs: 7.5 },
+  { id: 'ing_radish_shredded', name: '萝卜丝馅', category: 'filling', alias: ['萝卜丝', '白萝卜丝'], calories: 35, protein: 1.0, fat: 0.3, carbs: 6.8 },
+  { id: 'ing_mushroom_filling', name: '香菇馅', category: 'filling', alias: ['香菇碎', '香菇丁'], calories: 40, protein: 2.5, fat: 0.4, carbs: 6.0 },
+  { id: 'ing_greens_filling', name: '青菜馅', category: 'filling', alias: ['青菜碎'], calories: 28, protein: 1.5, fat: 0.3, carbs: 4.5 },
+  { id: 'ing_brown_sugar', name: '红糖', category: 'filling', alias: ['黑糖'], calories: 380, protein: 0.5, fat: 0, carbs: 94.0 },
+  { id: 'ing_sesame_black', name: '黑芝麻', category: 'filling', alias: ['芝麻'], calories: 559, protein: 19.1, fat: 46.1, carbs: 24.0 },
+  { id: 'ing_peanut_butter', name: '花生酱', category: 'filling', alias: ['花生酥'], calories: 594, protein: 25.0, fat: 50.0, carbs: 20.0 },
+  { id: 'ing_scallion_oil', name: '葱油', category: 'filling', alias: [], calories: 880, protein: 0.5, fat: 98.0, carbs: 1.5 },
+  { id: 'ing_dough', name: '面团（发酵）', category: 'filling', alias: ['面皮', '面团'], calories: 240, protein: 7.0, fat: 1.5, carbs: 50.0 },
+  { id: 'ing_wonton_wrapper', name: '馄饨皮', category: 'filling', alias: ['饺子皮', '云吞皮'], calories: 280, protein: 8.0, fat: 1.0, carbs: 56.0 },
+  { id: 'ing_phyllo', name: '酥皮', category: 'filling', alias: ['油酥皮'], calories: 450, protein: 6.0, fat: 28.0, carbs: 45.0 },
 ]
 
 // ============================================================
