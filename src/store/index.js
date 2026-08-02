@@ -10,6 +10,7 @@ import {
 } from '../data/mock'
 import { getFoodById, FOOD_DATABASE } from '../data/foods'
 import { deletePhoto as deletePhotoFromDB } from '../utils/photoStorage'
+import { generateMockUsers, addAdminLog as addLog, ADMIN_CREDENTIALS } from '../data/adminMock'
 
 const useStore = create(
   persist(
@@ -46,6 +47,39 @@ const useStore = create(
 
       // 美食手账记录
       journals: [],
+
+      // ========== 管理员后台相关 ==========
+      adminLoggedIn: false,
+      adminUser: null,
+      mockUsers: null,  // 模拟用户数据（首次进入后台时生成）
+
+      adminLogin: (username, password) => {
+        if (username === ADMIN_CREDENTIALS.username && password === ADMIN_CREDENTIALS.password) {
+          set({ adminLoggedIn: true, adminUser: { username } })
+          if (!get().mockUsers) {
+            set({ mockUsers: generateMockUsers() })
+          }
+          addLog('LOGIN', `管理员 ${username} 登录`)
+          return true
+        }
+        return false
+      },
+
+      adminLogout: () => {
+        addLog('LOGOUT', `管理员登出`)
+        set({ adminLoggedIn: false, adminUser: null })
+      },
+
+      ensureMockUsers: () => {
+        if (!get().mockUsers) {
+          set({ mockUsers: generateMockUsers() })
+        }
+        return get().mockUsers
+      },
+
+      logAdminAction: (action, detail) => {
+        addLog(action, detail)
+      },
 
       // 个人自定义菜品库
       customFoods: [],
@@ -873,6 +907,19 @@ const useStore = create(
         favorites: state.favorites,
         journals: state.journals,
       }),
+      onRehydrateStorage: (state) => {
+        return (restoredState, error) => {
+          if (error) {
+            console.error('zustand rehydrate error:', error)
+            return
+          }
+          if (restoredState?.profile) {
+            // profile 恢复后，重新计算 targets（否则 targets 还是 DEFAULT_PROFILE 算的）
+            const newTargets = calcDailyTargets(restoredState.profile)
+            restoredState.targets = newTargets
+          }
+        }
+      },
     }
   )
 )
