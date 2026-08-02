@@ -72,10 +72,16 @@ export default function IngredientBreakdownModal({ dishName, onClose, onConfirm 
     }
   }, [ingredients, totalWeight, cookMethod, customOil])
 
-  // 更新食材重量
+  // 更新食材重量（支持空值输入，失焦时才校验）
   const updateIngredientWeight = (index, weight) => {
     const updated = [...ingredients]
-    const w = Math.max(5, Math.round(Number(weight) || 0))
+    if (weight === '' || weight === null || weight === undefined) {
+      updated[index] = { ...updated[index], weight: '' }
+      setIngredients(updated)
+      return
+    }
+    const w = Math.max(5, Math.round(Number(weight)))
+    if (isNaN(w)) return
     const factor = w / 100
     updated[index] = {
       ...updated[index],
@@ -190,7 +196,19 @@ export default function IngredientBreakdownModal({ dishName, onClose, onConfirm 
                 <input
                   type="number"
                   value={totalWeight}
-                  onChange={(e) => setTotalWeight(Math.max(30, Number(e.target.value) || 0))}
+                  onChange={(e) => {
+                    if (e.target.value === '') {
+                      setTotalWeight('')
+                    } else {
+                      const v = Number(e.target.value)
+                      if (!isNaN(v)) setTotalWeight(Math.max(30, v))
+                    }
+                  }}
+                  onBlur={(e) => {
+                    if (e.target.value === '' || Number(e.target.value) < 30) {
+                      setTotalWeight(30)
+                    }
+                  }}
                   className="flex-1 bg-transparent outline-none text-sm font-medium"
                 />
                 <span className="text-xs text-gray-400">g</span>
@@ -277,7 +295,12 @@ export default function IngredientBreakdownModal({ dishName, onClose, onConfirm 
                       <input
                         type="number"
                         value={ing.weight}
-                        onChange={(e) => updateIngredientWeight(idx, e.target.value)}
+                        onChange={(e) => updateIngredientWeight(idx, e.target.value === '' ? '' : e.target.value)}
+                        onBlur={(e) => {
+                          if (e.target.value === '' || Number(e.target.value) < 5) {
+                            updateIngredientWeight(idx, 5)
+                          }
+                        }}
                         className="w-16 bg-white rounded-lg px-2 py-1 text-sm outline-none text-center"
                       />
                       <span className="text-xs text-gray-400">g</span>
