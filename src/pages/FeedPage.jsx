@@ -9,14 +9,19 @@ import {
   addComment,
   deleteFeed,
 } from '../utils/feed'
+import { checkGoalAchieved } from '../utils/goalCheck'
+import useStore from '../store'
 
 export default function FeedPage() {
   const navigate = useNavigate()
+  const profile = useStore(s => s.profile)
+  const targets = useStore(s => s.targets)
   const [currentUser, setCurrentUser] = useState(null)
   const [feeds, setFeeds] = useState([])
   const [friendIds, setFriendIds] = useState([])
   const [showPostModal, setShowPostModal] = useState(false)
   const [postContent, setPostContent] = useState('')
+  const [showGoalStatus, setShowGoalStatus] = useState(true)
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
   const [commentMap, setCommentMap] = useState({}) // feedId -> input value
@@ -44,18 +49,48 @@ export default function FeedPage() {
     }
   }
 
+  const getTodayRecords = () => {
+    try {
+      const today = new Date().toISOString().slice(0, 10)
+      const key = `diet_records_${today}`
+      const data = localStorage.getItem(key)
+      return data ? JSON.parse(data) : []
+    } catch {
+      return []
+    }
+  }
+
+  // 计算今日目标达成情况
+  const getTodayGoalInfo = () => {
+    const records = getTodayRecords()
+    const totalCalories = records.reduce((s, r) => s + (r.calories || 0), 0)
+    const targetCalories = targets?.dailyCalories || 2000
+    const goalType = profile?.dietGoal?.type || 'maintain'
+    return checkGoalAchieved(totalCalories, targetCalories, goalType, records)
+  }
+
+  // 通用发布逻辑
+  const doPost = async (content, withGoal = showGoalStatus) => {
+    const records = getTodayRecords()
+    const goalInfo = withGoal ? getTodayGoalInfo() : null
+    await postFeed(
+      currentUser.userId,
+      currentUser.username,
+      content,
+      records,
+      'friends',
+      withGoal ? {
+        goalReached: goalInfo.achieved,
+        targetCalories: goalInfo.targetCalories,
+      } : {},
+    )
+  }
+
   const handlePost = async () => {
     if (!postContent.trim()) return
     setLoading(true)
     try {
-      // 从本地取今日记录作为分享内容
-      const records = getTodayRecords()
-      await postFeed(
-        currentUser.userId,
-        currentUser.username,
-        postContent.trim(),
-        records,
-      )
+      await doPost(postContent.trim(), showGoalStatus)
       setPostContent('')
       setShowPostModal(false)
       loadFeed(currentUser.userId)
@@ -68,14 +103,28 @@ export default function FeedPage() {
     }
   }
 
-  const getTodayRecords = () => {
+  // 一键分享今日饮食（不需要写文字）
+  const handleQuickPost = async () => {
+    const records = getTodayRecords()
+    if (records.length === 0) {
+      setMessage('今天还没有记录饮食哦，先去记录吧~')
+      setTimeout(() => setMessage(''), 3000)
+      return
+    }
+    setLoading(true)
     try {
-      const today = new Date().toISOString().slice(0, 10)
-      const key = `diet_records_${today}`
-      const data = localStorage.getItem(key)
-      return data ? JSON.parse(data) : []
-    } catch {
-      return []
+      const goalInfo = getTodayGoalInfo()
+      const defaultText = goalInfo.achieved
+        ? `今天吃了 ${records.length} 餐，共 ${goalInfo.totalCalories} kcal，完美达成目标！💪`
+        : `今天吃了 ${records.length} 餐，共 ${goalInfo.totalCalories} kcal，继续加油～`
+      await doPost(defaultText, true)
+      loadFeed(currentUser.userId)
+      setMessage('分享成功！')
+      setTimeout(() => setMessage(''), 3000)
+    } catch (e) {
+      setMessage('发布失败：' + e.message)
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -129,12 +178,21 @@ export default function FeedPage() {
           <h1 className="text-2xl font-bold">🥗 好友动态</h1>
           <p className="text-amber-100 text-sm mt-1">看看好友们今天都吃了啥</p>
         </div>
-        <button
-          onClick={() => setShowPostModal(true)}
-          className="px-4 py-2 bg-white text-amber-500 rounded-xl font-medium shadow-lg"
-        >
-          ✏️ 分享
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={handleQuickPost}
+            disabled={loading}
+            className="px-4 py-2 bg-white text-amber-500 rounded-xl font-medium shadow-lg disabled:opacity-50"
+          >
+            🚀 一键分享
+          </button>
+          <button
+            onClick={() => setShowPostModal(true)}
+            className="px-3 py-2 bg-white/20 text-white rounded-xl font-medium"
+          >
+            ✏️
+          </button>
+        </div>
       </div>
 
       {/* 消息 */}
@@ -184,6 +242,19 @@ export default function FeedPage() {
                 <div className="px-4 pb-3">
                   <p className="text-gray-700">{feed.content}</p>
                 </div>
+
+                {/* 目标达成标识 */}
+                {feed.goalReached !== null && feed.goalReached !== undefined && (
+                  <div className={`mx-4 mb-2 px-3 py-2 rounded-xl text-sm flex items-center gap-2 ${
+                  feed.goalReached ? 'bg-green-50 text-green-600' : 'bg-gray-50 text-gray-500'
+                }`}>
+                  <span className="text-lg">{feed.goalReached ? '🏆' : '💪'}</span>
+                  <span>
+                    {feed.goalReached ? '今日热量目标已达成！' : '今日继续加油，向目标迈进'}
+                    {feed.targetCalories && <span className="opacity-70 ml-1">（目标 {feed.targetCalories} kcal）</span>}
+                  </span>
+                </div>
+                )}
 
                 {/* 饮食记录 */}
                 {feed.records && feed.records.length > 0 && (
@@ -274,12 +345,34 @@ export default function FeedPage() {
                 value={postContent}
                 onChange={(e) => setPostContent(e.target.value)}
                 placeholder="今天吃了什么好吃的？写点什么分享给好友吧~"
-                rows={4}
+                rows={3}
                 className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-amber-400 outline-none resize-none"
               />
-              <div className="text-sm text-gray-500">
-                📋 今日记录：{getTodayRecords().length} 条 ·
-                约 {getTodayRecords().reduce((s, r) => s + (r.calories || 0), 0)} kcal
+              <div className="bg-amber-50 rounded-xl p-3 space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">📋 今日记录</span>
+                  <span className="font-medium text-amber-700">
+                    {getTodayRecords().length} 餐 · {getTodayRecords().reduce((s, r) => s + (r.calories || 0), 0)} kcal
+                  </span>
+                </div>
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-gray-600">🎯 目标热量</span>
+                  <span className="font-medium">
+                    {getTodayGoalInfo().totalCalories} / {getTodayGoalInfo().targetCalories} kcal
+                    {getTodayGoalInfo().achieved
+                      ? <span className="text-green-500 ml-2">✓ 已达成</span>
+                      : <span className="text-gray-400 ml-2">未达成</span>}
+                  </span>
+                </div>
+                <label className="flex items-center gap-2 text-sm text-gray-600 pt-2 border-t border-amber-100">
+                  <input
+                    type="checkbox"
+                    checked={showGoalStatus}
+                    onChange={(e) => setShowGoalStatus(e.target.checked)}
+                    className="w-4 h-4 accent-amber-500"
+                  />
+                  分享时展示是否达成今日热量目标
+                </label>
               </div>
               <button
                 onClick={handlePost}

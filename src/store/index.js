@@ -985,6 +985,7 @@ const useStore = create(
         tastePreferences: state.tastePreferences,
         favorites: state.favorites,
         journals: state.journals,
+        currentUser: state.currentUser,
       }),
       onRehydrateStorage: (state) => {
         return (restoredState, error) => {
@@ -993,9 +994,20 @@ const useStore = create(
             return
           }
           if (restoredState?.profile) {
-            // profile 恢复后，重新计算 targets（否则 targets 还是 DEFAULT_PROFILE 算的）
             const newTargets = calcDailyTargets(restoredState.profile)
-            restoredState.targets = newTargets
+            state.targets = newTargets
+          }
+          // 如果有云端登录态，同步云端用户信息覆盖默认 profile
+          try {
+            const data = localStorage.getItem('diet_tracker_current_user')
+            if (data) {
+              const cloudUser = JSON.parse(data)
+              if (cloudUser && cloudUser.profile) {
+                state.syncCloudUser(cloudUser)
+              }
+            }
+          } catch (e) {
+            console.warn('恢复云端用户信息失败:', e)
           }
         }
       },

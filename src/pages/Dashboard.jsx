@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import dayjs from 'dayjs'
 import {
@@ -6,6 +6,7 @@ import {
 } from 'recharts'
 import useStore from '../store'
 import ProgressRing from '../components/ProgressRing'
+import { checkGoalAchieved, getYesterdayStr, getTodayStr } from '../utils/goalCheck'
 import usagiYellow from '../assets/03_黄色背景乌萨奇.jpg'
 import usagiEat from '../assets/07_吃东西的乌萨奇.jpg'
 
@@ -42,11 +43,50 @@ export default function Dashboard() {
   const weeklyStats = getWeeklyStats()
   const todayLogs = getLogsByDate(dayjs().format('YYYY-MM-DD'))
 
+  const [showGoalReward, setShowGoalReward] = useState(false)
+  const [yesterdayGoalInfo, setYesterdayGoalInfo] = useState(null)
+
   useEffect(() => {
     if (!todayRecommendations) {
       generateTodayRecommendations()
     }
   }, [todayRecommendations, generateTodayRecommendations])
+
+  // 检查昨日目标是否达成（仅在今天第一次打开时弹窗）
+  useEffect(() => {
+    const yesterday = getYesterdayStr()
+    const today = getTodayStr()
+    const lastShown = localStorage.getItem('goal_reward_last_shown')
+
+    // 今天已经弹过就不弹了
+    if (lastShown === today) return
+
+    try {
+      // 取昨日记录
+      const key = `diet_records_${yesterday}`
+      const data = localStorage.getItem(key)
+      const records = data ? JSON.parse(data) : []
+
+      if (records.length > 0) {
+        const totalCalories = records.reduce((s, r) => s + (r.calories || 0), 0)
+        const targetCalories = targets?.dailyCalories || 2000
+        const goalType = profile?.dietGoal?.type || 'maintain'
+        const info = checkGoalAchieved(totalCalories, targetCalories, goalType, records)
+        setYesterdayGoalInfo(info)
+
+        if (info.achieved) {
+          setShowGoalReward(true)
+        }
+      }
+    } catch (e) {
+      console.warn('检查昨日目标失败:', e)
+    }
+
+    // 标记今天已经检查过（无论是否达成都不重复弹）
+    localStorage.setItem('goal_reward_last_shown', today)
+  }, [profile, targets])
+
+  const closeGoalReward = () => setShowGoalReward(false)
 
   // 检查哪些餐次已记录
   const loggedMeals = new Set(todayLogs.map(l => l.mealType))
@@ -349,6 +389,45 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
+      {/* 昨日目标达成奖励弹窗 */}
+      {showGoalReward && yesterdayGoalInfo && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+          <div className="w-full max-w-sm bg-white rounded-3xl overflow-hidden animate-bounce-in">
+            <div className="bg-gradient-to-br from-yellow-400 via-amber-400 to-orange-400 px-6 py-8 text-center text-white">
+              <div className="text-6xl mb-3">🎉</div>
+              <h2 className="text-2xl font-bold">恭喜完成目标！</h2>
+              <p className="text-amber-100 text-sm mt-1">昨天的你超棒的 🌟</p>
+            </div>
+            <div className="px-6 py-5 space-y-3">
+              <div className="flex justify-between items-center p-3 bg-green-50 rounded-xl">
+                <span className="text-gray-600">昨日摄入</span>
+                <span className="font-bold text-green-600 text-lg">{yesterdayGoalInfo.totalCalories} kcal</span>
+              </div>
+              <div className="flex justify-between items-center p-3 bg-amber-50 rounded-xl">
+                <span className="text-gray-600">目标范围</span>
+                <span className="font-medium text-amber-700">
+                  {yesterdayGoalInfo.minCalories || yesterdayGoalInfo.minCal} ~ {yesterdayGoalInfo.maxCalories || yesterdayGoalInfo.maxCal} kcal
+                </span>
+              </div>
+              <div className="flex justify-between items-center text-sm text-gray-500 pt-2 border-t">
+                <span>三餐齐全</span>
+                <span className={yesterdayGoalInfo.threeMealsDone ? 'text-green-500 font-medium' : 'text-gray-400'}>
+                  {yesterdayGoalInfo.threeMealsDone ? '✓ 是' : '✗ 否'}
+                </span>
+              </div>
+            </div>
+            <div className="px-6 pb-6">
+              <button
+                onClick={closeGoalReward}
+                className="w-full py-4 bg-gradient-to-r from-amber-400 to-orange-400 text-white font-bold rounded-xl shadow-lg"
+              >
+                今天继续加油！💪
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
