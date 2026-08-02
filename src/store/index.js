@@ -924,6 +924,57 @@ const useStore = create(
       listAccounts: () => {
         return Object.keys(get()._getAccounts())
       },
+
+      // ========== 云端账户同步 ==========
+      // 将云端用户信息（注册/登录返回的 user 对象）同步到本地 store
+      syncCloudUser: (cloudUser) => {
+        if (!cloudUser) return
+        const p = cloudUser.profile || {}
+
+        // 将云端 profile 映射到本地 store 的 profile 结构
+        const goalMap = { lose: 'fat_loss', gain: 'weight_gain', maintain: 'maintain' }
+        const genderMap = { '女': 'female', '男': 'male', 'female': 'female', 'male': 'male' }
+
+        const profileUpdates = {
+          nickname: cloudUser.username || p.nickname || '用户',
+          gender: genderMap[p.gender] || p.gender || 'female',
+          age: p.age || 20,
+          height: p.height || 165,
+          weight: p.weight || 55,
+          identity: p.identity || 'student',
+          profession: p.profession || '学生',
+          dietGoal: {
+            type: goalMap[p.goal] || p.goal || 'maintain',
+            targetWeight: p.targetWeight || p.weight || 55,
+            rateLevel: 'gentle',
+            startDate: new Date().toISOString().slice(0, 10),
+            expectedDurationMonths: 3,
+          },
+        }
+
+        const newProfile = { ...get().profile, ...profileUpdates, updatedAt: new Date().toISOString().slice(0, 10) }
+        const newTargets = calcDailyTargets(newProfile)
+        set({
+          profile: newProfile,
+          targets: newTargets,
+          currentUser: cloudUser.username || null,
+        })
+      },
+
+      // 从 localStorage 恢复登录态并同步到 store
+      restoreCloudLogin: () => {
+        try {
+          const data = localStorage.getItem('diet_tracker_current_user')
+          if (data) {
+            const user = JSON.parse(data)
+            if (user) {
+              get().syncCloudUser(user)
+            }
+          }
+        } catch (e) {
+          console.warn('恢复云端登录态失败:', e)
+        }
+      },
     }),
     {
       name: 'diet-tracker-storage',

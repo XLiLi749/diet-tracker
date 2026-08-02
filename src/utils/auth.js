@@ -116,15 +116,21 @@ export const updateUserProfile = async (userId, profile) => {
 }
 
 // ============================================================
-// 搜索用户（用于添加好友
+// 搜索用户（用于添加好友）
 // ============================================================
 export const searchUsers = async (keyword) => {
   const db = await getDb()
   if (!db) throw new Error('云开发未初始化，请检查网络或稍后重试')
 
   // 模糊搜索用户名
-  const result = await db.collection('users').get()
-  if (!result.data) return []
+  let result
+  try {
+    result = await db.collection('users').get()
+  } catch (e) {
+    console.error('搜索用户失败:', e)
+    throw new Error('搜索失败，请检查数据库权限设置（users 集合需允许所有登录用户读取）')
+  }
+  if (!result.data || result.data.length === 0) return []
 
   const kw = keyword.toLowerCase().trim()
   return result.data

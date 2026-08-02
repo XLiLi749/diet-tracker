@@ -17,14 +17,19 @@ import FriendsPage from './pages/FriendsPage'
 import BottomNav from './components/BottomNav'
 import { getLoginState } from './utils/auth'
 import { initCloudBase } from './utils/cloudbase'
+import useStore from './store'
 
 function App() {
   const location = useLocation()
   const navigate = useNavigate()
+  const restoreCloudLogin = useStore(s => s.restoreCloudLogin)
 
   useEffect(() => {
     initCloudBase()
     window.scrollTo(0, 0)
+
+    // 恢复云端登录态到本地 store
+    restoreCloudLogin()
 
     // 未登录时跳登录页
     const publicPaths = ['/login', '/admin/login', '/admin/dashboard']
@@ -32,7 +37,7 @@ function App() {
     if (!user && !publicPaths.some(p => location.pathname.startsWith(p))) {
       navigate('/login')
     }
-  }, [location.pathname, navigate])
+  }, [location.pathname, navigate, restoreCloudLogin])
 
   const showBottomNav =
     !location.pathname.startsWith('/admin') &&

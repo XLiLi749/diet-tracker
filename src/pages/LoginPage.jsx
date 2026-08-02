@@ -2,9 +2,11 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { registerUser, loginUser, saveLoginState, getLoginState } from '../utils/auth'
 import { initCloudBase } from '../utils/cloudbase'
+import useStore from '../store'
 
 export default function LoginPage() {
   const navigate = useNavigate()
+  const syncCloudUser = useStore(s => s.syncCloudUser)
   const [mode, setMode] = useState('login') // login | register
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -48,9 +50,11 @@ export default function LoginPage() {
           targetWeight: goal === 'gain' ? Number(weight) + 5 : goal === 'lose' ? Number(weight) - 5 : Number(weight),
         })
         saveLoginState(user)
+        syncCloudUser(user)
       } else {
         const user = await loginUser(username.trim(), password)
         saveLoginState(user)
+        syncCloudUser(user)
       }
       navigate('/')
     } catch (e) {
