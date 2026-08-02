@@ -474,9 +474,13 @@ export default function Profile() {
               <p className="text-xs text-gray-400">数据会自动保存到该账户下</p>
               <button
                 onClick={() => {
-                  if (confirm('确定要退出登录吗？退出前数据会自动保存。')) {
+                  try {
                     logoutAccount()
-                  }
+                  } catch (e) {}
+                  setTimeout(() => {
+                    navigate('/login', { replace: true })
+                    window.location.reload()
+                  }, 50)
                 }}
                 className="w-full text-left text-sm text-orange-500 py-2"
               >
@@ -618,10 +622,14 @@ export default function Profile() {
             <div className="border-t border-gray-100 my-2" />
             <button
               onClick={() => {
-                if (confirm('确定要退出登录吗？')) {
+                try {
                   clearLoginState()
-                  navigate('/login')
-                }
+                  logoutAccount()
+                } catch (e) {}
+                setTimeout(() => {
+                  navigate('/login', { replace: true })
+                  window.location.reload()
+                }, 50)
               }}
               className="w-full text-left text-sm text-red-500 py-2 font-medium"
             >

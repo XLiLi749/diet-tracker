@@ -5,11 +5,11 @@
 import { getDb } from './cloudbase'
 
 // ============================================================
-// 密码哈希（优先 SHA-256，不支持时降级为简单哈希）
-// 登录时会同时尝试两种方式，确保跨设备兼容
+// 密码哈希（统一使用兼容方案，确保手机/电脑都能登录）
+// 历史老用户（SHA-256）登录时自动升级为兼容哈希
 // ============================================================
 
-// 降级哈希（简单字符串哈希，兼容所有浏览器）
+// 兼容哈希（所有浏览器/设备都支持）
 const fallbackHash = (password) => {
   const salted = password + 'diet-tracker-salt-2026'
   let hash = 0
@@ -18,10 +18,10 @@ const fallbackHash = (password) => {
     hash = ((hash << 5) - hash) + char
     hash = hash & hash
   }
-  return 'fallback_' + Math.abs(hash).toString(16).padStart(16, '0') + '_' + salted.length.toString(16)
+  return 'fb_' + Math.abs(hash).toString(16).padStart(16, '0') + '_' + salted.length.toString(16)
 }
 
-// SHA-256 哈希（优先）
+// SHA-256 哈希（仅用于兼容历史老用户）
 const sha256Hash = async (password) => {
   const salted = password + 'diet-tracker-salt-2026'
   if (typeof crypto !== 'undefined' && crypto.subtle && crypto.subtle.digest) {
@@ -38,24 +38,21 @@ const sha256Hash = async (password) => {
   return null
 }
 
-// 对外：生成密码哈希（注册时用）
+// 注册时：始终使用兼容哈希（确保任何设备都能登录）
 const hashPassword = async (password) => {
-  const sha = await sha256Hash(password)
-  if (sha) return sha
   return fallbackHash(password)
 }
 
-// 对外：验证密码（登录时用，同时尝试两种方式）
+// 登录时：同时尝试兼容哈希 + SHA-256（兼容老用户）
+// 返回 { ok: boolean, needUpgrade: boolean }
 const verifyPassword = async (password, storedHash) => {
-  // 先直接匹配（最常见情况）
-  const sha = await sha256Hash(password)
-  if (sha && sha === storedHash) return true
-
-  // 再试降级哈希
   const fb = fallbackHash(password)
-  if (fb === storedHash) return true
+  if (fb === storedHash) return { ok: true, needUpgrade: false }
 
-  return false
+  const sha = await sha256Hash(password)
+  if (sha && sha === storedHash) return { ok: true, needUpgrade: true }
+
+  return { ok: false, needUpgrade: false }
 }
 
 // ============================================================
@@ -121,10 +118,23 @@ export const loginUser = async (username, password) => {
   }
 
   const user = result.data[0]
-  const passwordOk = await verifyPassword(password, user.password)
+  const verifyResult = await verifyPassword(password, user.password)
 
-  if (!passwordOk) {
+  if (!verifyResult.ok) {
     throw new Error('密码错误')
+  }
+
+  // 如果是老的 SHA-256 用户，自动升级为兼容哈希（确保手机端也能登录）
+  if (verifyResult.needUpgrade) {
+    try {
+      const newHash = await hashPassword(password)
+      await db.collection('users').doc(user._id).update({
+        password: newHash,
+      })
+      console.log('密码哈希已升级为兼容方案')
+    } catch (e) {
+      console.warn('密码哈希升级失败（不影响登录）:', e)
+    }
   }
 
   // 更新最后登录时间

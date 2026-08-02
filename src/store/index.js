@@ -11,6 +11,7 @@ import {
 import { getFoodById, FOOD_DATABASE } from '../data/foods'
 import { deletePhoto as deletePhotoFromDB } from '../utils/photoStorage'
 import { generateMockUsers, addAdminLog as addLog, ADMIN_CREDENTIALS } from '../data/adminMock'
+import { clearLoginState as clearCloudLoginState } from '../utils/auth'
 
 const useStore = create(
   persist(
@@ -908,10 +909,20 @@ const useStore = create(
             tastePreferences: state.tastePreferences,
             journals: state.journals,
           }
-          localStorage.setItem(`diet-tracker-user-${currentUser}`, JSON.stringify(data))
+          try {
+            localStorage.setItem(`diet-tracker-user-${currentUser}`, JSON.stringify(data))
+          } catch (e) {
+            console.warn('保存用户数据失败:', e)
+          }
         }
+        // 清除所有登录状态（云端 + 本地）
+        try {
+          clearCloudLoginState()
+        } catch (e) {}
         set({ currentUser: null })
-        localStorage.removeItem('diet-tracker-current-user')
+        try {
+          localStorage.removeItem('diet-tracker-current-user')
+        } catch (e) {}
       },
 
       autoLogin: () => {

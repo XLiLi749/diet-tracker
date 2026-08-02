@@ -177,14 +177,25 @@ export default function LoginPage() {
                 </div>
                 <div>
                   <label className="block text-sm text-gray-600 mb-1">性别</label>
-                  <select
-                    value={gender}
-                    onChange={(e) => setGender(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:border-amber-400 outline-none bg-white"
-                  >
-                    <option value="女">女</option>
-                    <option value="男">男</option>
-                  </select>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { v: '女', label: '👩 女' },
+                      { v: '男', label: '👨 男' },
+                    ].map(o => (
+                      <button
+                        key={o.v}
+                        type="button"
+                        onClick={() => setGender(o.v)}
+                        className={`py-2 px-2 rounded-lg text-sm transition-all ${
+                          gender === o.v
+                            ? 'bg-amber-400 text-white'
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                      >
+                        {o.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
 
