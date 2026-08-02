@@ -107,6 +107,14 @@ export default function FoodLog() {
       name: food.name,
       quantity: qty,
       unit,
+      // 保存每100g营养基准（智能估算的菜不在FOOD_DATABASE里，需要这里保存）
+      nutritionPer100g: {
+        calories: food.calories,
+        caloriesWithSoup: food.caloriesWithSoup,
+        protein: food.protein,
+        fat: food.fat,
+        carbs: food.carbs,
+      },
       caloriesNoSoup: calInfo.caloriesNoSoup,
       caloriesWithSoup: calInfo.caloriesWithSoup,
       calories: defaultEatSoup ? calInfo.caloriesWithSoup : calInfo.caloriesNoSoup,
@@ -137,9 +145,24 @@ export default function FoodLog() {
   }
 
   const handleUpdateQty = (index, qty) => {
-    const food = FOOD_DATABASE.find(f => f.id === selectedItems[index].foodId)
-    if (!food) return
-    const calInfo = getCaloriesInfo(food, qty)
+    const item = selectedItems[index]
+    if (!item) return
+    // 优先用保存的每100g营养基准（智能估算的菜不在FOOD_DATABASE里）
+    let baseFood = item.nutritionPer100g
+      ? {
+          ...item,
+          calories: item.nutritionPer100g.calories,
+          caloriesWithSoup: item.nutritionPer100g.caloriesWithSoup,
+          protein: item.nutritionPer100g.protein,
+          fat: item.nutritionPer100g.fat,
+          carbs: item.nutritionPer100g.carbs,
+        }
+      : null
+    if (!baseFood) {
+      baseFood = FOOD_DATABASE.find(f => f.id === item.foodId)
+    }
+    if (!baseFood) return
+    const calInfo = getCaloriesInfo(baseFood, qty)
     const factor = qty / 100
     const updated = [...selectedItems]
     const prevEatSoup = updated[index].eatSoup
@@ -149,9 +172,9 @@ export default function FoodLog() {
       caloriesNoSoup: calInfo.caloriesNoSoup,
       caloriesWithSoup: calInfo.caloriesWithSoup,
       calories: prevEatSoup ? calInfo.caloriesWithSoup : calInfo.caloriesNoSoup,
-      protein: Math.round(food.protein * factor * 10) / 10,
-      carbs: Math.round(food.carbs * factor * 10) / 10,
-      fat: Math.round(food.fat * factor * 10) / 10,
+      protein: Math.round(baseFood.protein * factor * 10) / 10,
+      carbs: Math.round(baseFood.carbs * factor * 10) / 10,
+      fat: Math.round(baseFood.fat * factor * 10) / 10,
     }
     setSelectedItems(updated)
   }
