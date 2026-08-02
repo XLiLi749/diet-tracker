@@ -155,3 +155,5 @@ export const getFriendDailyStats = async (friendIds, date) => {
       mealCount: f.summary?.mealCount || 0,
     }))
 }
+
+
