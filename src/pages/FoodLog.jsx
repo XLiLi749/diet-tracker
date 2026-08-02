@@ -77,8 +77,9 @@ export default function FoodLog() {
 
   const searchResults = useMemo(() => {
     const results = searchFood(searchKeyword, customFoods)
-    // 如果搜索关键词存在但结果很少，生成智能估算
-    if (searchKeyword && searchKeyword.trim() && results.length < 3) {
+    // 只有搜索结果为空时，才生成智能估算
+    // （如果已有精确匹配或其他结果，就不再显示"暂无条目"）
+    if (searchKeyword && searchKeyword.trim() && results.length === 0) {
       const guess = smartGuessDish(searchKeyword.trim())
       setSmartGuessResult(guess)
     } else {
