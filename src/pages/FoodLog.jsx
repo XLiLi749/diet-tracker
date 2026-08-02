@@ -146,6 +146,15 @@ export default function FoodLog() {
   }
 
   const handleUpdateQty = (index, qty) => {
+    // 允许空值（用户正在输入中，清空后准备输入新数字）
+    if (qty === '' || qty === null || qty === undefined) {
+      const updated = [...selectedItems]
+      updated[index] = { ...updated[index], quantity: '' }
+      setSelectedItems(updated)
+      return
+    }
+    const num = Number(qty)
+    if (isNaN(num) || num < 0) return
     const item = selectedItems[index]
     if (!item) return
     // 优先用保存的每100g营养基准（智能估算的菜不在FOOD_DATABASE里）
@@ -480,7 +489,13 @@ export default function FoodLog() {
                         <input
                           type="number"
                           value={item.quantity}
-                          onChange={(e) => handleUpdateQty(idx, Number(e.target.value) || 0)}
+                          onChange={(e) => handleUpdateQty(idx, e.target.value === '' ? '' : Number(e.target.value))}
+                          onBlur={(e) => {
+                            // 失焦时，如果是空的就回退到最小1
+                            if (e.target.value === '' || Number(e.target.value) <= 0) {
+                              handleUpdateQty(idx, 1)
+                            }
+                          }}
                           className="w-16 text-center text-xs border border-gray-200 rounded py-1"
                         />
                         <span className="text-xs text-gray-400">{item.unit}</span>

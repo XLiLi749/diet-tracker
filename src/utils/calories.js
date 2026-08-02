@@ -36,6 +36,7 @@ const NONE_KEYWORDS = [
   '米饭', '馒头', '包子', '花卷', '面包', '饼', '粥',
   '水果', '奶茶', '咖啡', '果汁', '可乐', '雪碧',
   '零食', '饼干', '蛋糕', '糖果',
+  '牛奶', '酸奶', '豆浆', '布丁', '冰淇淋',
 ]
 
 // 菜系油脂加成（赣/湘/川 重油）
@@ -65,8 +66,8 @@ export const getOilLevel = (food) => {
   if (tags.some(t => LIGHT_CUISINES.includes(t))) return 'light'
   if (tags.some(t => MEDIUM_CUISINES.includes(t))) return 'medium'
 
-  // 3. 类别判断
-  if (['主食', '水果', '饮品', '零食', '甜点'].includes(category)) return 'none'
+  // 3. 类别判断（蛋奶、饮料、水果、零食等天然无油无汤的食物）
+  if (['主食', '水果', '饮品', '饮料', '零食', '甜点', '蛋奶', '坚果', '豆制品'].includes(category)) return 'none'
   if (['汤类', '粥品'].includes(category)) return 'light'
 
   // 4. 标签辅助
