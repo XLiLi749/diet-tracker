@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import dayjs from 'dayjs'
 import { getLoginState } from '../utils/auth'
 import { getMyFriends } from '../utils/friends'
 import {
@@ -51,10 +52,22 @@ export default function FeedPage() {
 
   const getTodayRecords = () => {
     try {
-      const today = new Date().toISOString().slice(0, 10)
-      const key = `diet_records_${today}`
-      const data = localStorage.getItem(key)
-      return data ? JSON.parse(data) : []
+      const today = dayjs().format('YYYY-MM-DD')
+      const dayLogs = useStore.getState().foodLogs[today] || []
+      // 展开所有 items，合并成一条条食物记录
+      const records = []
+      dayLogs.forEach(log => {
+        (log.items || []).forEach(item => {
+          records.push({
+            name: item.name,
+            calories: item.calories,
+            protein: item.protein,
+            quantity: item.quantity,
+            mealType: log.mealType,
+          })
+        })
+      })
+      return records
     } catch {
       return []
     }
