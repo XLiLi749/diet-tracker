@@ -8,8 +8,8 @@ import { getDb } from './cloudbase'
 // 发布饮食动态
 // ============================================================
 export const postFeed = async (userId, username, content, records = [], shareType = 'friends') => {
-  const db = getDb()
-  if (!db) throw new Error('云开发未初始化')
+  const db = await getDb()
+  if (!db) throw new Error('云开发未初始化，请检查网络或稍后重试')
 
   // 汇总今日热量
   const totalCalories = records.reduce((sum, r) => sum + (r.calories || 0), 0)
@@ -43,8 +43,8 @@ export const postFeed = async (userId, username, content, records = [], shareTyp
 // 获取好友动态（含自己的）
 // ============================================================
 export const getFriendFeed = async (myUserId, friendIds = []) => {
-  const db = getDb()
-  if (!db) throw new Error('云开发未初始化')
+  const db = await getDb()
+  if (!db) throw new Error('云开发未初始化，请检查网络或稍后重试')
 
   const allUserIds = [myUserId, ...friendIds]
 
@@ -68,8 +68,8 @@ export const getFriendFeed = async (myUserId, friendIds = []) => {
 // 点赞/取消点赞
 // ============================================================
 export const toggleLike = async (feedId, userId, username) => {
-  const db = getDb()
-  if (!db) throw new Error('云开发未初始化')
+  const db = await getDb()
+  if (!db) throw new Error('云开发未初始化，请检查网络或稍后重试')
 
   const feed = await db.collection('feed_records').doc(feedId).get()
   if (!feed.data) throw new Error('动态不存在')
@@ -91,8 +91,8 @@ export const toggleLike = async (feedId, userId, username) => {
 // 添加评论
 // ============================================================
 export const addComment = async (feedId, userId, username, text) => {
-  const db = getDb()
-  if (!db) throw new Error('云开发未初始化')
+  const db = await getDb()
+  if (!db) throw new Error('云开发未初始化，请检查网络或稍后重试')
 
   const feed = await db.collection('feed_records').doc(feedId).get()
   if (!feed.data) throw new Error('动态不存在')
@@ -113,8 +113,8 @@ export const addComment = async (feedId, userId, username, text) => {
 // 删除动态
 // ============================================================
 export const deleteFeed = async (feedId, userId) => {
-  const db = getDb()
-  if (!db) throw new Error('云开发未初始化')
+  const db = await getDb()
+  if (!db) throw new Error('云开发未初始化，请检查网络或稍后重试')
 
   const feed = await db.collection('feed_records').doc(feedId).get()
   if (!feed.data || feed.data.userId !== userId) {
@@ -129,8 +129,8 @@ export const deleteFeed = async (feedId, userId) => {
 // 获取好友每日统计（用于对比）
 // ============================================================
 export const getFriendDailyStats = async (friendIds, date) => {
-  const db = getDb()
-  if (!db) throw new Error('云开发未初始化')
+  const db = await getDb()
+  if (!db) throw new Error('云开发未初始化，请检查网络或稍后重试')
 
   // 从动态中找当日发布的内容
   const dateStr = date || new Date().toISOString().slice(0, 10)
@@ -155,5 +155,3 @@ export const getFriendDailyStats = async (friendIds, date) => {
       mealCount: f.summary?.mealCount || 0,
     }))
 }
-
-

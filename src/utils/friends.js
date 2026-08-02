@@ -8,8 +8,8 @@ import { getDb } from './cloudbase'
 // 发送好友请求
 // ============================================================
 export const sendFriendRequest = async (fromUserId, fromUsername, toUserId, toUsername) => {
-  const db = getDb()
-  if (!db) throw new Error('云开发未初始化')
+  const db = await getDb()
+  if (!db) throw new Error('云开发未初始化，请检查网络或稍后重试')
 
   // 检查是否已经是好友或已有请求（双向检查）
   const existing = await db.collection('friendships')
@@ -47,8 +47,8 @@ export const sendFriendRequest = async (fromUserId, fromUsername, toUserId, toUs
 // 处理好友请求（同意/拒绝）
 // ============================================================
 export const handleFriendRequest = async (friendshipId, accept) => {
-  const db = getDb()
-  if (!db) throw new Error('云开发未初始化')
+  const db = await getDb()
+  if (!db) throw new Error('云开发未初始化，请检查网络或稍后重试')
 
   await db.collection('friendships').doc(friendshipId).update({
     status: accept ? 'accepted' : 'rejected',
@@ -61,8 +61,8 @@ export const handleFriendRequest = async (friendshipId, accept) => {
 // 获取我的好友列表
 // ============================================================
 export const getMyFriends = async (userId) => {
-  const db = getDb()
-  if (!db) throw new Error('云开发未初始化')
+  const db = await getDb()
+  if (!db) throw new Error('云开发未初始化，请检查网络或稍后重试')
 
   // 双向查询：我是发起方 或 我是接收方，且状态为已接受
   const result = await db.collection('friendships')
@@ -97,8 +97,8 @@ export const getMyFriends = async (userId) => {
 // 获取发给我的好友请求
 // ============================================================
 export const getIncomingRequests = async (userId) => {
-  const db = getDb()
-  if (!db) throw new Error('云开发未初始化')
+  const db = await getDb()
+  if (!db) throw new Error('云开发未初始化，请检查网络或稍后重试')
 
   const result = await db.collection('friendships')
     .where({ toUserId: userId, status: 'pending' })
@@ -111,8 +111,8 @@ export const getIncomingRequests = async (userId) => {
 // 解除好友关系
 // ============================================================
 export const removeFriend = async (userId, friendId) => {
-  const db = getDb()
-  if (!db) throw new Error('云开发未初始化')
+  const db = await getDb()
+  if (!db) throw new Error('云开发未初始化，请检查网络或稍后重试')
 
   const result = await db.collection('friendships')
     .where({

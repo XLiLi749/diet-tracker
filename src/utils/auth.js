@@ -19,11 +19,17 @@ const hashPassword = async (password) => {
 // 注册新用户
 // ============================================================
 export const registerUser = async (username, password, profile = {}) => {
-  const db = getDb()
-  if (!db) throw new Error('云开发未初始化')
+  const db = await getDb()
+  if (!db) throw new Error('云开发未初始化，请检查网络或稍后重试')
 
   // 检查用户名是否已存在
-  const existing = await db.collection('users').where({ username }).get()
+  let existing
+  try {
+    existing = await db.collection('users').where({ username }).get()
+  } catch (e) {
+    console.error('查询用户失败:', e)
+    throw new Error('数据库连接失败，请检查腾讯云配置或稍后重试')
+  }
   if (existing.data && existing.data.length > 0) {
     throw new Error('该昵称已被使用，请换一个')
   }
@@ -57,10 +63,16 @@ export const registerUser = async (username, password, profile = {}) => {
 // 登录
 // ============================================================
 export const loginUser = async (username, password) => {
-  const db = getDb()
-  if (!db) throw new Error('云开发未初始化')
+  const db = await getDb()
+  if (!db) throw new Error('云开发未初始化，请检查网络或稍后重试')
 
-  const result = await db.collection('users').where({ username }).get()
+  let result
+  try {
+    result = await db.collection('users').where({ username }).get()
+  } catch (e) {
+    console.error('登录查询失败:', e)
+    throw new Error('数据库连接失败，请检查网络或稍后重试')
+  }
   if (!result.data || result.data.length === 0) {
     throw new Error('用户不存在')
   }
@@ -89,8 +101,8 @@ export const loginUser = async (username, password) => {
 // 更新用户资料
 // ============================================================
 export const updateUserProfile = async (userId, profile) => {
-  const db = getDb()
-  if (!db) throw new Error('云开发未初始化')
+  const db = await getDb()
+  if (!db) throw new Error('云开发未初始化，请检查网络或稍后重试')
 
   const result = await db.collection('users').where({ userId }).get()
   if (!result.data || result.data.length === 0) throw new Error('用户不存在')
@@ -107,8 +119,8 @@ export const updateUserProfile = async (userId, profile) => {
 // 搜索用户（用于添加好友
 // ============================================================
 export const searchUsers = async (keyword) => {
-  const db = getDb()
-  if (!db) throw new Error('云开发未初始化')
+  const db = await getDb()
+  if (!db) throw new Error('云开发未初始化，请检查网络或稍后重试')
 
   // 模糊搜索用户名
   const result = await db.collection('users').get()
@@ -142,5 +154,3 @@ export const getLoginState = () => {
 export const clearLoginState = () => {
   localStorage.removeItem(STORAGE_KEY)
 }
-
-
