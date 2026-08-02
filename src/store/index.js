@@ -263,11 +263,39 @@ const useStore = create(
       },
 
       getWeightTrend: (days = 28) => {
-        const { bodyRecords } = get()
+        const { bodyRecords, profile } = get()
         const startDate = dayjs().subtract(days - 1, 'day')
-        return bodyRecords
+        const endDate = dayjs()
+
+        // 先按日期去重：同一天多条只保留最新的一条
+        const dailyMap = {}
+        bodyRecords
           .filter(r => dayjs(r.date).isAfter(startDate.subtract(1, 'day')))
           .sort((a, b) => a.date.localeCompare(b.date))
+          .forEach(r => {
+            dailyMap[r.date] = r  // 后写入的覆盖先写入的
+          })
+
+        // 生成连续日期序列，没有记录的天沿用前一天的体重
+        const result = []
+        let lastWeight = profile?.weight || 60
+        for (let d = startDate; d.isBefore(endDate) || d.isSame(endDate, 'day'); d = d.add(1, 'day')) {
+          const dateStr = d.format('YYYY-MM-DD')
+          if (dailyMap[dateStr]) {
+            lastWeight = dailyMap[dateStr].weight
+            result.push({ ...dailyMap[dateStr], date: dateStr })
+          } else {
+            result.push({
+              id: `body_fill_${dateStr}`,
+              date: dateStr,
+              weight: lastWeight,
+              bodyFat: null,
+              note: '',
+              isFilled: true,
+            })
+          }
+        }
+        return result
       },
 
       // ========== 推荐相关 ==========
