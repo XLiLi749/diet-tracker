@@ -5,14 +5,33 @@
 import { getDb } from './cloudbase'
 
 // ============================================================
-// 简单密码哈希（SHA-256）
+// 密码哈希（优先 SHA-256，不支持时降级为简单哈希）
 // ============================================================
 const hashPassword = async (password) => {
-  const encoder = new TextEncoder()
-  const data = encoder.encode(password + 'diet-tracker-salt-2026')
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data)
-  const hashArray = Array.from(new Uint8Array(hashBuffer))
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
+  const salted = password + 'diet-tracker-salt-2026'
+
+  // 优先使用浏览器原生 SHA-256
+  if (typeof crypto !== 'undefined' && crypto.subtle && crypto.subtle.digest) {
+    try {
+      const encoder = new TextEncoder()
+      const data = encoder.encode(salted)
+      const hashBuffer = await crypto.subtle.digest('SHA-256', data)
+      const hashArray = Array.from(new Uint8Array(hashBuffer))
+      return hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
+    } catch (e) {
+      console.warn('SHA-256 加密失败，使用降级方案:', e)
+    }
+  }
+
+  // 降级方案：简单的字符串哈希（兼容所有浏览器）
+  let hash = 0
+  for (let i = 0; i < salted.length; i++) {
+    const char = salted.charCodeAt(i)
+    hash = ((hash << 5) - hash) + char
+    hash = hash & hash
+  }
+  // 转换成固定长度的十六进制字符串
+  return 'fallback_' + Math.abs(hash).toString(16).padStart(16, '0') + '_' + salted.length.toString(16)
 }
 
 // ============================================================
