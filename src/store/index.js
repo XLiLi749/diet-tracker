@@ -9,7 +9,7 @@ import {
   generateMockBodyRecords,
 } from '../data/mock'
 import { getFoodById, FOOD_DATABASE } from '../data/foods'
-import { deletePhoto as deletePhotoFromDB } from '../utils/photoStorage'
+import { deletePhoto as deletePhotoFromDB, savePhoto as savePhotoToDB } from '../utils/photoStorage'
 import { generateMockUsers, addAdminLog as addLog, ADMIN_CREDENTIALS } from '../data/adminMock'
 import { clearLoginState as clearCloudLoginState } from '../utils/auth'
 import { pushToCloud, flushPush, pullFromCloud, SYNC_FIELDS } from '../utils/cloudSync'
@@ -998,6 +998,17 @@ const useStore = create(
               updates.targets = calcDailyTargets(updates.profile)
             }
             set(updates)
+
+            // 如果云端有头像图片，恢复到本地 IndexedDB
+            if (cloudData.avatarDataUrl && cloudData.profile?.avatar) {
+              try {
+                await savePhotoToDB(cloudData.profile.avatar, cloudData.avatarDataUrl)
+                console.log('✅ 头像图片已从云端恢复到本地')
+              } catch (e) {
+                console.warn('恢复头像图片失败:', e)
+              }
+            }
+
             console.log('✅ 云端数据已同步到本地')
             return true
           }

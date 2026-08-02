@@ -5,6 +5,7 @@
 // ============================================================
 
 import { getDb } from './cloudbase'
+import { getPhoto } from './photoStorage'
 
 const COLLECTION = 'user_sync_data'
 const SYNC_DEBOUNCE_MS = 2000 // 2秒防抖，避免频繁写入
@@ -59,6 +60,19 @@ const doPush = async (userId, syncData) => {
 
   const now = new Date().toISOString()
 
+  // 如果有头像，把图片 dataURL 也一起同步到云端
+  const finalData = { ...syncData }
+  if (syncData.profile?.avatar) {
+    try {
+      const avatarDataUrl = await getPhoto(syncData.profile.avatar)
+      if (avatarDataUrl) {
+        finalData.avatarDataUrl = avatarDataUrl
+      }
+    } catch (e) {
+      console.warn('读取头像图片失败，不同步图片:', e)
+    }
+  }
+
   // 查找用户是否已有同步记录
   let existing
   try {
@@ -73,14 +87,14 @@ const doPush = async (userId, syncData) => {
     // 更新已有记录
     const docId = existing.data[0]._id
     await db.collection(COLLECTION).doc(docId).update({
-      ...syncData,
+      ...finalData,
       updatedAt: now,
     })
   } else {
     // 新建记录
     await db.collection(COLLECTION).add({
       userId,
-      ...syncData,
+      ...finalData,
       createdAt: now,
       updatedAt: now,
     })
