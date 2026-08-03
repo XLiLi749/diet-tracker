@@ -58,13 +58,13 @@ export default function LoginPage() {
         saveLoginState(user)
         syncCloudUser(user)
         // 新用户：把初始数据推送到云端
-        setTimeout(() => pushDataToCloud(), 500)
+        setTimeout(() => pushDataToCloud(), 100)
       } else {
         const user = await loginUser(username.trim(), password)
         saveLoginState(user)
         syncCloudUser(user)
         // 老用户：从云端拉取已同步的数据
-        setTimeout(() => syncFromCloud(user.userId), 200)
+        setTimeout(() => syncFromCloud(user.userId), 100)
       }
       navigate('/')
     } catch (e) {

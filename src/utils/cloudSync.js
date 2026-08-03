@@ -8,7 +8,7 @@ import { getDb } from './cloudbase'
 import { getPhoto } from './photoStorage'
 
 const COLLECTION = 'user_sync_data'
-const SYNC_DEBOUNCE_MS = 2000 // 2秒防抖，避免频繁写入
+const SYNC_DEBOUNCE_MS = 500 // 500ms防抖，几乎实时同步，同时避免频繁写入
 
 // 需要同步的字段
 export const SYNC_FIELDS = [
