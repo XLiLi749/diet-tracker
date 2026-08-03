@@ -64,30 +64,46 @@ export const getMyFriends = async (userId) => {
   const db = await getDb()
   if (!db) throw new Error('云开发未初始化，请检查网络或稍后重试')
 
-  // 双向查询：我是发起方 或 我是接收方，且状态为已接受
-  const result = await db.collection('friendships')
-    .where({
-      $or: [
-        { fromUserId: userId, status: 'accepted' },
-        { toUserId: userId, status: 'accepted' },
-      ],
-    }).get()
+  // 腾讯云数据库对 $or 支持有限，改为两次查询再合并
+  let result1 = { data: [] }
+  let result2 = { data: [] }
+  try {
+    result1 = await db.collection('friendships')
+      .where({ fromUserId: userId, status: 'accepted' })
+      .get()
+  } catch (e) {
+    console.warn('查询发起的好友关系失败:', e)
+  }
+  try {
+    result2 = await db.collection('friendships')
+      .where({ toUserId: userId, status: 'accepted' })
+      .get()
+  } catch (e) {
+    console.warn('查询接收的好友关系失败:', e)
+  }
 
-  if (!result.data) return []
+  const all = [...(result1.data || []), ...(result2.data || [])]
 
   const friends = []
-  for (const fs of result.data) {
+  const seenIds = new Set()
+  for (const fs of all) {
     // 判断好友是哪一方
-    const friendId = fs.fromUserId === userId ? fs.toUserId : fs.fromUserId
+    const friendId = String(fs.fromUserId) === String(userId) ? fs.toUserId : fs.fromUserId
+    if (seenIds.has(friendId)) continue
+    seenIds.add(friendId)
     // 查好友信息
-    const userResult = await db.collection('users').where({ userId: friendId }).get()
-    if (userResult.data && userResult.data.length > 0) {
-      const u = userResult.data[0]
-      friends.push({
-        userId: u.userId,
-        username: u.username,
-        profile: u.profile,
-      })
+    try {
+      const userResult = await db.collection('users').where({ userId: friendId }).get()
+      if (userResult.data && userResult.data.length > 0) {
+        const u = userResult.data[0]
+        friends.push({
+          userId: u.userId,
+          username: u.username,
+          profile: u.profile,
+        })
+      }
+    } catch (e) {
+      console.warn('查询好友信息失败:', e)
     }
   }
   return friends

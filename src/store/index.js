@@ -11,7 +11,7 @@ import {
 import { getFoodById, FOOD_DATABASE } from '../data/foods'
 import { deletePhoto as deletePhotoFromDB, savePhoto as savePhotoToDB } from '../utils/photoStorage'
 import { generateMockUsers, addAdminLog as addLog, ADMIN_CREDENTIALS } from '../data/adminMock'
-import { clearLoginState as clearCloudLoginState } from '../utils/auth'
+import { clearLoginState as clearCloudLoginState, updateUserProfile as updateCloudUserProfile } from '../utils/auth'
 import { pushToCloud, flushPush, pullFromCloud, SYNC_FIELDS } from '../utils/cloudSync'
 
 const useStore = create(
@@ -137,10 +137,23 @@ const useStore = create(
 
       // ========== 用户档案相关 ==========
       updateProfile: (updates) => {
-        const { profile } = get()
+        const { profile, currentUserId } = get()
         const newProfile = { ...profile, ...updates, updatedAt: dayjs().format('YYYY-MM-DD') }
         const newTargets = calcDailyTargets(newProfile)
         set({ profile: newProfile, targets: newTargets })
+
+        // 同步更新云端 users 集合（防抖 2 秒）
+        if (currentUserId) {
+          if (get()._profileSyncTimer) clearTimeout(get()._profileSyncTimer)
+          const timer = setTimeout(async () => {
+            try {
+              await updateCloudUserProfile(currentUserId, get().profile)
+            } catch (e) {
+              console.warn('同步用户资料到云端失败:', e)
+            }
+          }, 2000)
+          set({ _profileSyncTimer: timer })
+        }
       },
 
       getBMI: () => {
@@ -798,6 +811,7 @@ const useStore = create(
 
       // ========== 账户管理（本地账户） ==========
       currentUser: null,
+      currentUserId: null,
 
       // 简易字符串哈希（非加密安全，仅用于本地存储）
       _hashPassword: (pwd) => {
@@ -950,13 +964,15 @@ const useStore = create(
         const genderMap = { '女': 'female', '男': 'male', 'female': 'female', 'male': 'male' }
 
         const profileUpdates = {
-          nickname: cloudUser.username || p.nickname || '用户',
+          // 优先用用户自己设置的昵称，而不是登录名
+          nickname: p.nickname || cloudUser.username || '用户',
           gender: genderMap[p.gender] || p.gender || 'female',
           age: p.age || 20,
           height: p.height || 165,
           weight: p.weight || 55,
           identity: p.identity || 'student',
           profession: p.profession || '学生',
+          avatar: p.avatar || null,
           dietGoal: {
             type: goalMap[p.goal] || p.goal || 'maintain',
             targetWeight: p.targetWeight || p.weight || 55,
@@ -972,6 +988,7 @@ const useStore = create(
           profile: newProfile,
           targets: newTargets,
           currentUser: cloudUser.username || null,
+          currentUserId: cloudUser.userId || null,
         })
       },
 

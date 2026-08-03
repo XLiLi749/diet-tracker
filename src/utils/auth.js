@@ -169,13 +169,12 @@ export const updateUserProfile = async (userId, profile) => {
 }
 
 // ============================================================
-// 搜索用户（用于添加好友）
+// 搜索用户（用于添加好友）- 支持按昵称或用户ID搜索
 // ============================================================
 export const searchUsers = async (keyword) => {
   const db = await getDb()
   if (!db) throw new Error('云开发未初始化，请检查网络或稍后重试')
 
-  // 模糊搜索用户名
   let result
   try {
     result = await db.collection('users').get()
@@ -187,7 +186,10 @@ export const searchUsers = async (keyword) => {
 
   const kw = keyword.toLowerCase().trim()
   return result.data
-    .filter(u => u.username.toLowerCase().includes(kw))
+    .filter(u =>
+      u.username.toLowerCase().includes(kw) ||
+      (u.userId && u.userId.toLowerCase().includes(kw))
+    )
     .map(u => ({
       userId: u.userId,
       username: u.username,

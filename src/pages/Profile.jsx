@@ -67,6 +67,7 @@ export default function Profile() {
     exportData,
     importData,
     currentUser,
+    currentUserId,
     registerAccount,
     loginAccount,
     logoutAccount,
@@ -525,7 +526,22 @@ export default function Profile() {
               <p className="text-sm text-gray-600">
                 已登录：<span className="font-semibold text-primary-600">{currentUser}</span>
               </p>
-              <p className="text-xs text-gray-400">数据会自动保存到该账户下</p>
+              {currentUserId && (
+                <div
+                  className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2 cursor-pointer hover:bg-gray-100"
+                  onClick={() => {
+                    navigator.clipboard?.writeText(currentUserId)
+                    alert('个人ID已复制！')
+                  }}
+                >
+                  <div>
+                    <p className="text-[10px] text-gray-400">个人ID（点击复制）</p>
+                    <p className="text-xs font-mono text-gray-700">{currentUserId}</p>
+                  </div>
+                  <span className="text-xs text-gray-400">📋</span>
+                </div>
+              )}
+              <p className="text-xs text-gray-400">数据会自动保存到云端，可在不同设备间同步</p>
               <button
                 onClick={() => {
                   try {
@@ -597,13 +613,25 @@ export default function Profile() {
         <div className="card">
           <h3 className="text-sm font-semibold text-gray-700 mb-3">⚙️ 设置</h3>
           <div className="space-y-2">
+            {/* 隐私告知 */}
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-3">
+              <p className="text-xs text-amber-800 font-medium mb-1">🔒 隐私告知</p>
+              <p className="text-[11px] text-amber-700 leading-relaxed">
+                您的饮食记录、身体数据将自动保存到云端，不同设备登录同一账号即可同步。
+                平台严格保护您的个人隐私。所有热量数据为估算参考值。
+              </p>
+            </div>
+
+            {/* 本地备份（辅助功能，云端已自动同步） */}
+            <div className="border-t border-gray-100 my-2" />
+            <p className="text-[10px] text-gray-400 mb-1">本地备份（云端已自动同步，以下为辅助功能）</p>
             <button
               onClick={() => exportData()}
-              className="w-full text-left text-sm text-blue-600 py-2"
+              className="w-full text-left text-sm text-gray-500 py-2"
             >
               📤 导出数据（备份为 JSON 文件）
             </button>
-            <label className="block w-full text-left text-sm text-blue-600 py-2 cursor-pointer">
+            <label className="block w-full text-left text-sm text-gray-500 py-2 cursor-pointer">
               📥 导入数据（从 JSON 文件恢复）
               <input
                 type="file"
@@ -633,18 +661,8 @@ export default function Profile() {
                 {importMsg}
               </p>
             )}
+
             <div className="border-t border-gray-100 my-2" />
-
-            {/* 隐私告知 */}
-            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-3">
-              <p className="text-xs text-amber-800 font-medium mb-1">🔒 隐私告知</p>
-              <p className="text-[11px] text-amber-700 leading-relaxed">
-                您的饮食记录、身体数据将被平台管理员用于产品优化分析。
-                平台严格保护您的个人隐私，管理员不得私自泄露或传播任何用户信息。
-                所有热量数据为估算参考值。
-              </p>
-            </div>
-
             <button
               onClick={() => navigate('/admin/login')}
               className="w-full text-left text-sm text-gray-500 py-2 hover:text-gray-700"
@@ -672,22 +690,6 @@ export default function Profile() {
               className="w-full text-left text-sm text-red-500 py-2"
             >
               🔄 重置为示例数据（恢复初始状态）
-            </button>
-            <div className="border-t border-gray-100 my-2" />
-            <button
-              onClick={() => {
-                try {
-                  clearLoginState()
-                  logoutAccount()
-                } catch (e) {}
-                setTimeout(() => {
-                  navigate('/login', { replace: true })
-                  window.location.reload()
-                }, 50)
-              }}
-              className="w-full text-left text-sm text-red-500 py-2 font-medium"
-            >
-              🚪 退出登录
             </button>
             <p className="text-xs text-gray-400 pt-2">
               版本 v0.1.0 · 仅供参考，不替代专业医疗建议

@@ -195,9 +195,9 @@ export const deleteFeed = async (feedId, userId) => {
     throw new Error('动态不存在或已被删除')
   }
 
-  console.log('删除校验：动态userId=' + feed.data.userId + '，当前userId=' + userId)
+  console.log('删除校验：动态userId=' + feed.data.userId + '，当前userId=' + userId + '，是否相等=' + (String(feed.data.userId) === String(userId)))
 
-  if (feed.data.userId !== userId) {
+  if (String(feed.data.userId) !== String(userId)) {
     throw new Error('没有权限删除（这条动态不是你发布的）')
   }
 

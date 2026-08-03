@@ -150,6 +150,7 @@ export default function FriendsPage() {
                   </div>
                   <div>
                     <div className="font-medium">{f.username}</div>
+                    <div className="text-[10px] text-gray-400 font-mono">{f.userId}</div>
                     <div className="text-xs text-gray-400">
                       {f.profile?.height}cm · {f.profile?.weight}kg · {f.profile?.goal === 'gain' ? '增重' : f.profile?.goal === 'lose' ? '减重' : '维持'}
                     </div>
@@ -215,7 +216,7 @@ export default function FriendsPage() {
                 value={searchKeyword}
                 onChange={(e) => setSearchKeyword(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                placeholder="输入好友昵称搜索"
+                placeholder="输入昵称或个人ID搜索"
                 className="flex-1 px-4 py-3 rounded-xl border border-gray-200 focus:border-amber-400 outline-none"
               />
               <button
