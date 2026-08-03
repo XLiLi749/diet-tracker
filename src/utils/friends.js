@@ -11,20 +11,27 @@ export const sendFriendRequest = async (fromUserId, fromUsername, toUserId, toUs
   const db = await getDb()
   if (!db) throw new Error('云开发未初始化，请检查网络或稍后重试')
 
-  // 检查是否已经是好友或已有请求（双向检查）
-  const existing = await db.collection('friendships')
-    .where({
-      $or: [
-        { fromUserId, toUserId },
-        { fromUserId: toUserId, toUserId: fromUserId },
-      ],
-    }).get()
+  const fromUid = String(fromUserId)
+  const toUid = String(toUserId)
 
-  if (existing.data && existing.data.length > 0) {
-    const fs = existing.data[0]
-    if (fs.status === 'accepted') throw new Error('你们已经是好友了')
-    if (fs.status === 'pending') {
-      if (fs.fromUserId === fromUserId) {
+  // 检查是否已经是好友或已有请求（拉取全量数据，客户端判断，避免类型不匹配）
+  let all = []
+  try {
+    const r = await db.collection('friendships').get()
+    all = r.data || []
+  } catch (e) {
+    console.warn('查询好友关系失败:', e)
+  }
+
+  const existing = all.find(fs =>
+    (String(fs.fromUserId) === fromUid && String(fs.toUserId) === toUid) ||
+    (String(fs.fromUserId) === toUid && String(fs.toUserId) === fromUid)
+  )
+
+  if (existing) {
+    if (existing.status === 'accepted') throw new Error('你们已经是好友了')
+    if (existing.status === 'pending') {
+      if (String(existing.fromUserId) === fromUid) {
         throw new Error('已发送过好友请求，等待对方同意')
       } else {
         throw new Error('对方已向你发送好友请求，请去「请求」中处理')
@@ -33,11 +40,11 @@ export const sendFriendRequest = async (fromUserId, fromUsername, toUserId, toUs
   }
 
   const result = await db.collection('friendships').add({
-    fromUserId,
+    fromUserId: fromUid,
     fromUsername,
-    toUserId,
+    toUserId: toUid,
     toUsername,
-    status: 'pending', // pending | accepted | rejected
+    status: 'pending',
     createdAt: new Date().toISOString(),
   })
   return result.id
@@ -65,18 +72,16 @@ export const getMyFriends = async (userId) => {
   if (!db) throw new Error('云开发未初始化，请检查网络或稍后重试')
   const uid = String(userId)
 
-  // 腾讯云数据库对 $or 支持有限，改为两次查询再合并
+  // 拉取全量好友关系，客户端过滤（避免where查询类型不匹配）
   let allFriendships = []
   try {
-    // 先查所有包含我的关系（不论角色），再客户端过滤
-    const r1 = await db.collection('friendships').where({ fromUserId: uid }).get()
-    const r2 = await db.collection('friendships').where({ toUserId: uid }).get()
-    allFriendships = [...(r1.data || []), ...(r2.data || [])]
+    const r = await db.collection('friendships').get()
+    allFriendships = r.data || []
   } catch (e) {
     console.warn('查询好友关系失败:', e)
   }
 
-  // 客户端过滤：只保留 accepted 状态，且匹配当前用户
+  // 客户端过滤：accepted 状态，且当前用户是其中一方
   const friends = []
   const seenIds = new Set()
   for (const fs of allFriendships) {
@@ -114,12 +119,16 @@ export const getIncomingRequests = async (userId) => {
   if (!db) throw new Error('云开发未初始化，请检查网络或稍后重试')
   const uid = String(userId)
 
-  const result = await db.collection('friendships')
-    .where({ toUserId: uid })
-    .get()
+  // 拉取全量数据，客户端过滤（避免where查询类型不匹配）
+  let all = []
+  try {
+    const r = await db.collection('friendships').get()
+    all = r.data || []
+  } catch (e) {
+    console.warn('查询好友请求失败:', e)
+  }
 
-  // 客户端过滤 pending 状态和 toUserId 匹配（防止类型不一致）
-  return (result.data || []).filter(r =>
+  return all.filter(r =>
     r.status === 'pending' && String(r.toUserId) === uid
   )
 }
@@ -130,17 +139,25 @@ export const getIncomingRequests = async (userId) => {
 export const removeFriend = async (userId, friendId) => {
   const db = await getDb()
   if (!db) throw new Error('云开发未初始化，请检查网络或稍后重试')
+  const uid = String(userId)
+  const fid = String(friendId)
 
-  const result = await db.collection('friendships')
-    .where({
-      $or: [
-        { fromUserId: userId, toUserId: friendId },
-        { fromUserId: friendId, toUserId: userId },
-      ],
-    }).get()
+  // 拉取全量数据，客户端找目标
+  let all = []
+  try {
+    const r = await db.collection('friendships').get()
+    all = r.data || []
+  } catch (e) {
+    console.warn('查询好友关系失败:', e)
+  }
 
-  if (result.data && result.data.length > 0) {
-    await db.collection('friendships').doc(result.data[0]._id).remove()
+  const target = all.find(fs =>
+    (String(fs.fromUserId) === uid && String(fs.toUserId) === fid) ||
+    (String(fs.fromUserId) === fid && String(fs.toUserId) === uid)
+  )
+
+  if (target) {
+    await db.collection('friendships').doc(target._id).remove()
   }
   return true
 }

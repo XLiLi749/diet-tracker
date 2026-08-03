@@ -13,11 +13,12 @@ export const postFeed = async (userId, username, content, records = [], shareTyp
   const db = await getDb()
   if (!db) throw new Error('云开发未初始化，请检查网络或稍后重试')
 
+  const uid = String(userId)
   const totalCalories = records.reduce((sum, r) => sum + (r.calories || 0), 0)
   const totalProtein = records.reduce((sum, r) => sum + (r.protein || 0), 0)
 
   const result = await db.collection('feed_records').add({
-    userId,
+    userId: uid,
     username,
     content,
     records: records.map(r => ({
@@ -33,8 +34,8 @@ export const postFeed = async (userId, username, content, records = [], shareTyp
       mealCount: records.length,
     },
     shareType,
-    goalReached: extra.goalReached || null,     // 是否达成目标
-    targetCalories: extra.targetCalories || null, // 目标热量
+    goalReached: extra.goalReached || null,
+    targetCalories: extra.targetCalories || null,
     createdAt: new Date().toISOString(),
   })
   return result.id
@@ -47,7 +48,8 @@ export const getFriendFeed = async (myUserId, friendIds = []) => {
   const db = await getDb()
   if (!db) throw new Error('云开发未初始化，请检查网络或稍后重试')
 
-  const allUserIds = [myUserId, ...friendIds]
+  const myUid = String(myUserId)
+  const allFriendIds = [myUid, ...friendIds.map(String)]
 
   const result = await db.collection('feed_records')
     .orderBy('createdAt', 'desc')
@@ -56,7 +58,8 @@ export const getFriendFeed = async (myUserId, friendIds = []) => {
 
   if (!result.data) return []
 
-  const feeds = result.data.filter(f => allUserIds.includes(f.userId))
+  // 客户端过滤（避免where查询类型不匹配）
+  const feeds = result.data.filter(f => allFriendIds.includes(String(f.userId)))
 
   // 批量获取所有动态的点赞和评论
   const feedIds = feeds.map(f => f._id)
@@ -104,14 +107,15 @@ export const getFriendFeed = async (myUserId, friendIds = []) => {
 export const toggleLike = async (feedId, userId, username) => {
   const db = await getDb()
   if (!db) throw new Error('云开发未初始化，请检查网络或稍后重试')
+  const uid = String(userId)
 
   // 查找是否已点赞
   let existing
   try {
-    const result = await db.collection('feed_likes')
-      .where({ feedId, userId })
-      .get()
-    existing = result.data && result.data[0]
+    // 拉取全量数据，客户端过滤（避免类型不匹配）
+    const r = await db.collection('feed_likes').get()
+    const all = r.data || []
+    existing = all.find(l => String(l.feedId) === String(feedId) && String(l.userId) === uid)
   } catch (e) {
     console.warn('查询点赞失败:', e)
   }
@@ -129,8 +133,8 @@ export const toggleLike = async (feedId, userId, username) => {
     // 点赞
     try {
       await db.collection('feed_likes').add({
-        feedId,
-        userId,
+        feedId: String(feedId),
+        userId: uid,
         username,
         createdAt: new Date().toISOString(),
       })
@@ -158,18 +162,22 @@ const getLikeCount = async (feedId) => {
 export const addComment = async (feedId, userId, username, text) => {
   const db = await getDb()
   if (!db) throw new Error('云开发未初始化，请检查网络或稍后重试')
+  const uid = String(userId)
 
   try {
     await db.collection('feed_comments').add({
-      feedId,
-      userId,
+      feedId: String(feedId),
+      userId: uid,
       username,
       text,
       createdAt: new Date().toISOString(),
     })
-    // 返回该 feed 的所有评论
-    const result = await db.collection('feed_comments').where({ feedId }).get()
-    return (result.data || []).sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+    // 返回该 feed 的所有评论（拉取全量客户端过滤）
+    const r = await db.collection('feed_comments').get()
+    const all = r.data || []
+    return all
+      .filter(c => String(c.feedId) === String(feedId))
+      .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
   } catch (e) {
     console.error('评论失败:', e)
     throw new Error('评论失败，请检查 feed_comments 集合权限')
@@ -182,6 +190,7 @@ export const addComment = async (feedId, userId, username, text) => {
 export const deleteFeed = async (feedId, userId) => {
   const db = await getDb()
   if (!db) throw new Error('云开发未初始化，请检查网络或稍后重试')
+  const uid = String(userId)
 
   let feed
   try {
@@ -195,9 +204,10 @@ export const deleteFeed = async (feedId, userId) => {
     throw new Error('动态不存在或已被删除')
   }
 
-  console.log('删除校验：动态userId=' + feed.data.userId + '，当前userId=' + userId + '，是否相等=' + (String(feed.data.userId) === String(userId)))
+  const feedUserId = String(feed.data.userId)
+  console.log('[删除动态校验] feedId=' + feedId + ', feed.userId=' + feedUserId + ', 当前userId=' + uid + ', 是否相等=' + (feedUserId === uid))
 
-  if (String(feed.data.userId) !== String(userId)) {
+  if (feedUserId !== uid) {
     throw new Error('没有权限删除（这条动态不是你发布的）')
   }
 
