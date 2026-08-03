@@ -213,11 +213,15 @@ export const deleteFeed = async (feedId, userId, username) => {
     throw new Error('动态不存在或已被删除')
   }
 
-  // 双重校验：优先 userId，其次 username（兼容老数据）
+  // 三重校验：
+  // 1. 优先 userId 判断
+  // 2. 其次 username 判断
+  // 3. 如果 feed 既没有 userId 也没有 username（老数据），直接允许（前端 isMine 已判断）
   const feedUserId = feed.data.userId ? String(feed.data.userId) : null
   const feedUsername = feed.data.username
   const userIdMatch = feedUserId && feedUserId === uid
   const usernameMatch = username && feedUsername && feedUsername === username
+  const isOldData = !feedUserId && !feedUsername
 
   console.log('[删除动态校验] feedId=' + feedId +
     ', feed.userId=' + feedUserId +
@@ -225,9 +229,10 @@ export const deleteFeed = async (feedId, userId, username) => {
     ', 当前userId=' + uid +
     ', 当前username=' + username +
     ', userIdMatch=' + userIdMatch +
-    ', usernameMatch=' + usernameMatch)
+    ', usernameMatch=' + usernameMatch +
+    ', isOldData=' + isOldData)
 
-  if (!userIdMatch && !usernameMatch) {
+  if (!userIdMatch && !usernameMatch && !isOldData) {
     console.warn('[删除动态] 权限拒绝')
     throw new Error('没有权限删除（这条动态不是你发布的）')
   }

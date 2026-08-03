@@ -53,6 +53,13 @@ export const pushToCloud = async (userId, state) => {
   }, SYNC_DEBOUNCE_MS)
 }
 
+// 判断是否是「集合不存在」的错误
+const isCollectionNotExistError = (e) => {
+  if (!e) return false
+  const msg = (e.message || e.code || JSON.stringify(e)).toLowerCase()
+  return msg.includes('collection_not_exist') || msg.includes('not exist') || msg.includes('404') || msg.includes('table not exist')
+}
+
 // 实际执行推送
 const doPush = async (userId, syncData) => {
   const db = await getDb()
@@ -78,8 +85,11 @@ const doPush = async (userId, syncData) => {
   try {
     existing = await db.collection(COLLECTION).where({ userId }).get()
   } catch (e) {
-    // 集合可能还不存在，先尝试创建
-    console.warn('查询同步数据失败，尝试新建:', e)
+    if (isCollectionNotExistError(e)) {
+      // 集合还不存在，静默跳过（不影响核心功能）
+      return
+    }
+    console.warn('查询同步数据失败:', e)
     existing = { data: [] }
   }
 
@@ -92,12 +102,20 @@ const doPush = async (userId, syncData) => {
     })
   } else {
     // 新建记录
-    await db.collection(COLLECTION).add({
-      userId,
-      ...finalData,
-      createdAt: now,
-      updatedAt: now,
-    })
+    try {
+      await db.collection(COLLECTION).add({
+        userId,
+        ...finalData,
+        createdAt: now,
+        updatedAt: now,
+      })
+    } catch (e) {
+      if (isCollectionNotExistError(e)) {
+        // 集合还不存在，静默跳过
+        return
+      }
+      throw e
+    }
   }
 
   // 保存最后同步时间
@@ -151,6 +169,10 @@ export const pullFromCloud = async (userId) => {
       return result.data[0]
     }
   } catch (e) {
+    if (isCollectionNotExistError(e)) {
+      // 集合还不存在，静默跳过（不影响核心功能）
+      return null
+    }
     console.warn('拉取云端数据失败:', e)
   }
   return null
