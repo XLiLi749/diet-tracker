@@ -766,6 +766,23 @@ const useStore = create(
         })
       },
 
+      // 重置为空白数据（切换账号时使用）
+      resetToEmpty: () => {
+        set({
+          profile: { ...DEFAULT_PROFILE },
+          targets: calcDailyTargets(DEFAULT_PROFILE),
+          foodLogs: {},
+          bodyRecords: [],
+          todayRecommendations: null,
+          tastePreferences: [],
+          favorites: [],
+          customFoods: [],
+          journals: [],
+          currentUser: null,
+          currentUserId: null,
+        })
+      },
+
       // 清空所有记录（保留用户档案）
       clearAllRecords: () => {
         const { profile } = get()
@@ -925,11 +942,11 @@ const useStore = create(
       },
 
       logoutAccount: async () => {
-        const { currentUser } = get()
-        if (currentUser) {
+        const { currentUserId, currentUser } = get()
+        if (currentUserId) {
           // 先同步到云端
           try {
-            await flushPush(currentUser, get())
+            await flushPush(currentUserId, get())
           } catch (e) {}
           // 保存当前数据到该用户名下（本地备份）
           const state = get()
@@ -941,14 +958,14 @@ const useStore = create(
             journals: state.journals,
           }
           try {
-            localStorage.setItem(`diet-tracker-user-${currentUser}`, JSON.stringify(data))
+            localStorage.setItem(`diet-tracker-user-${currentUserId}`, JSON.stringify(data))
           } catch (e) {}
         }
         // 清除所有登录状态（云端 + 本地）
         try {
           clearCloudLoginState()
         } catch (e) {}
-        set({ currentUser: null })
+        set({ currentUser: null, currentUserId: null })
         try {
           localStorage.removeItem('diet-tracker-current-user')
         } catch (e) {}
@@ -1057,9 +1074,9 @@ const useStore = create(
 
       // 立即推送当前数据到云端
       pushDataToCloud: async () => {
-        const { currentUser } = get()
-        if (!currentUser) return
-        await flushPush(currentUser, get())
+        const { currentUserId } = get()
+        if (!currentUserId) return
+        await flushPush(currentUserId, get())
       },
 
       // 从 localStorage 恢复登录态并同步到 store
@@ -1122,7 +1139,7 @@ const useStore = create(
 let lastSyncState = null
 
 useStore.subscribe((state, prevState) => {
-  const userId = state.currentUser
+  const userId = state.currentUserId
   if (!userId) return
 
   // 检查是否有需要同步的字段发生变化

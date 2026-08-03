@@ -9,6 +9,7 @@ export default function LoginPage() {
   const syncCloudUser = useStore(s => s.syncCloudUser)
   const syncFromCloud = useStore(s => s.syncFromCloud)
   const pushDataToCloud = useStore(s => s.pushDataToCloud)
+  const resetToEmpty = useStore(s => s.resetToEmpty)
   const [mode, setMode] = useState('login') // login | register
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -40,6 +41,9 @@ export default function LoginPage() {
       if (!username.trim()) throw new Error('请输入昵称')
       if (!password) throw new Error('请输入密码')
       if (password.length < 4) throw new Error('密码至少4位')
+
+      // 先清空上一个账号的本地数据（防止数据串号）
+      resetToEmpty()
 
       if (mode === 'register') {
         if (password !== confirmPwd) throw new Error('两次密码不一致')
