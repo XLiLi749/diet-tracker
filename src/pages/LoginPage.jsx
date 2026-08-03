@@ -60,7 +60,7 @@ export default function LoginPage() {
         saveLoginState(user)
         syncCloudUser(user)
         // 老用户：从云端拉取已同步的数据
-        setTimeout(() => syncFromCloud(user.username), 200)
+        setTimeout(() => syncFromCloud(user.userId), 200)
       }
       navigate('/')
     } catch (e) {

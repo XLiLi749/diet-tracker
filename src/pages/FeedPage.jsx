@@ -341,8 +341,8 @@ export default function FeedPage() {
           </div>
         ) : (
           feeds.map(feed => {
-            const isLiked = (feed.likes || []).some(l => l.userId === currentUser?.userId)
-            const isMine = feed.userId === currentUser?.userId
+            const isLiked = (feed.likes || []).some(l => String(l.userId) === String(currentUser?.userId))
+            const isMine = String(feed.userId) === String(currentUser?.userId)
             return (
               <div key={feed.id} className="bg-white rounded-2xl shadow-sm overflow-hidden">
                 {/* 用户信息 */}

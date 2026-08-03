@@ -11,7 +11,7 @@ import {
 import { getFoodById, FOOD_DATABASE } from '../data/foods'
 import { deletePhoto as deletePhotoFromDB, savePhoto as savePhotoToDB } from '../utils/photoStorage'
 import { generateMockUsers, addAdminLog as addLog, ADMIN_CREDENTIALS } from '../data/adminMock'
-import { clearLoginState as clearCloudLoginState, updateUserProfile as updateCloudUserProfile } from '../utils/auth'
+import { clearLoginState as clearCloudLoginState, updateUserProfile as updateCloudUserProfile, saveLoginState, getLoginState } from '../utils/auth'
 import { pushToCloud, flushPush, pullFromCloud, SYNC_FIELDS } from '../utils/cloudSync'
 
 const useStore = create(
@@ -137,10 +137,22 @@ const useStore = create(
 
       // ========== 用户档案相关 ==========
       updateProfile: (updates) => {
-        const { profile, currentUserId } = get()
+        const { profile, currentUserId, currentUser } = get()
         const newProfile = { ...profile, ...updates, updatedAt: dayjs().format('YYYY-MM-DD') }
         const newTargets = calcDailyTargets(newProfile)
         set({ profile: newProfile, targets: newTargets })
+
+        // 更新 localStorage 中的登录状态（防止刷新后恢复旧资料）
+        try {
+          const savedUser = getLoginState()
+          if (savedUser) {
+            const updatedUser = {
+              ...savedUser,
+              profile: { ...(savedUser.profile || {}), ...updates },
+            }
+            saveLoginState(updatedUser)
+          }
+        } catch (e) {}
 
         // 同步更新云端 users 集合（防抖 2 秒）
         if (currentUserId) {
@@ -1005,6 +1017,14 @@ const useStore = create(
 
           SYNC_FIELDS.forEach(field => {
             if (cloudData[field] !== undefined) {
+              // profile 字段：只有当云端更新时间更新时才覆盖（users 集合才是权威来源）
+              if (field === 'profile' && cloudData.profile) {
+                const localUpdatedAt = get().profile?.updatedAt || ''
+                const cloudUpdatedAt = cloudData.profile.updatedAt || ''
+                if (cloudUpdatedAt && localUpdatedAt && cloudUpdatedAt < localUpdatedAt) {
+                  return // 本地更新，跳过
+                }
+              }
               updates[field] = cloudData[field]
               hasUpdates = true
             }

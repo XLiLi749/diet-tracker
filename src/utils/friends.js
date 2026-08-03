@@ -63,37 +63,34 @@ export const handleFriendRequest = async (friendshipId, accept) => {
 export const getMyFriends = async (userId) => {
   const db = await getDb()
   if (!db) throw new Error('云开发未初始化，请检查网络或稍后重试')
+  const uid = String(userId)
 
   // 腾讯云数据库对 $or 支持有限，改为两次查询再合并
-  let result1 = { data: [] }
-  let result2 = { data: [] }
+  let allFriendships = []
   try {
-    result1 = await db.collection('friendships')
-      .where({ fromUserId: userId, status: 'accepted' })
-      .get()
+    // 先查所有包含我的关系（不论角色），再客户端过滤
+    const r1 = await db.collection('friendships').where({ fromUserId: uid }).get()
+    const r2 = await db.collection('friendships').where({ toUserId: uid }).get()
+    allFriendships = [...(r1.data || []), ...(r2.data || [])]
   } catch (e) {
-    console.warn('查询发起的好友关系失败:', e)
-  }
-  try {
-    result2 = await db.collection('friendships')
-      .where({ toUserId: userId, status: 'accepted' })
-      .get()
-  } catch (e) {
-    console.warn('查询接收的好友关系失败:', e)
+    console.warn('查询好友关系失败:', e)
   }
 
-  const all = [...(result1.data || []), ...(result2.data || [])]
-
+  // 客户端过滤：只保留 accepted 状态，且匹配当前用户
   const friends = []
   const seenIds = new Set()
-  for (const fs of all) {
-    // 判断好友是哪一方
-    const friendId = String(fs.fromUserId) === String(userId) ? fs.toUserId : fs.fromUserId
-    if (seenIds.has(friendId)) continue
-    seenIds.add(friendId)
-    // 查好友信息
+  for (const fs of allFriendships) {
+    if (fs.status !== 'accepted') continue
+    const fromMatch = String(fs.fromUserId) === uid
+    const toMatch = String(fs.toUserId) === uid
+    if (!fromMatch && !toMatch) continue
+
+    const friendId = fromMatch ? fs.toUserId : fs.fromUserId
+    if (seenIds.has(String(friendId))) continue
+    seenIds.add(String(friendId))
+
     try {
-      const userResult = await db.collection('users').where({ userId: friendId }).get()
+      const userResult = await db.collection('users').where({ userId: String(friendId) }).get()
       if (userResult.data && userResult.data.length > 0) {
         const u = userResult.data[0]
         friends.push({
@@ -115,12 +112,16 @@ export const getMyFriends = async (userId) => {
 export const getIncomingRequests = async (userId) => {
   const db = await getDb()
   if (!db) throw new Error('云开发未初始化，请检查网络或稍后重试')
+  const uid = String(userId)
 
   const result = await db.collection('friendships')
-    .where({ toUserId: userId, status: 'pending' })
+    .where({ toUserId: uid })
     .get()
 
-  return result.data || []
+  // 客户端过滤 pending 状态和 toUserId 匹配（防止类型不一致）
+  return (result.data || []).filter(r =>
+    r.status === 'pending' && String(r.toUserId) === uid
+  )
 }
 
 // ============================================================

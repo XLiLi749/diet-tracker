@@ -34,10 +34,10 @@ function App() {
 
     // 如果已登录，从云端拉取同步数据
     const user = getLoginState()
-    if (user && user.username) {
+    if (user && user.userId) {
       // 延迟一下，确保云开发初始化完成
       setTimeout(() => {
-        syncFromCloud(user.username)
+        syncFromCloud(user.userId)
       }, 500)
     }
 
