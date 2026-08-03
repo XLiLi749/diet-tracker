@@ -1031,18 +1031,53 @@ const useStore = create(
 
           const updates = {}
           let hasUpdates = false
+          const state = get()
 
           SYNC_FIELDS.forEach(field => {
-            if (cloudData[field] !== undefined) {
-              // profile 字段：只有当云端更新时间更新时才覆盖（users 集合才是权威来源）
-              if (field === 'profile' && cloudData.profile) {
-                const localUpdatedAt = get().profile?.updatedAt || ''
-                const cloudUpdatedAt = cloudData.profile.updatedAt || ''
-                if (cloudUpdatedAt && localUpdatedAt && cloudUpdatedAt < localUpdatedAt) {
-                  return // 本地更新，跳过
-                }
+            if (cloudData[field] === undefined) return
+
+            const localData = state[field]
+            const cloudVal = cloudData[field]
+
+            // profile 字段：只有当云端更新时间更新时才覆盖（users 集合才是权威来源）
+            if (field === 'profile' && cloudVal) {
+              const localUpdatedAt = state.profile?.updatedAt || ''
+              const cloudUpdatedAt = cloudVal.updatedAt || ''
+              if (cloudUpdatedAt && localUpdatedAt && cloudUpdatedAt < localUpdatedAt) {
+                return // 本地更新，跳过
               }
-              updates[field] = cloudData[field]
+              updates[field] = cloudVal
+              hasUpdates = true
+              return
+            }
+
+            // 其他字段（journals, foodLogs, bodyRecords 等）：智能合并
+            // 规则：
+            // - 本地有数据 && 云端无数据（空数组/空对象） → 保留本地（不覆盖）
+            // - 云端有数据 && 本地无数据 → 用云端
+            // - 都有数据 → 用云端（云端是权威备份）
+            const isLocalEmpty = Array.isArray(localData)
+              ? localData.length === 0
+              : (localData && typeof localData === 'object')
+                ? Object.keys(localData).length === 0
+                : !localData
+
+            const isCloudEmpty = Array.isArray(cloudVal)
+              ? cloudVal.length === 0
+              : (cloudVal && typeof cloudVal === 'object')
+                ? Object.keys(cloudVal).length === 0
+                : !cloudVal
+
+            if (isLocalEmpty && !isCloudEmpty) {
+              // 本地空，云端有 → 用云端
+              updates[field] = cloudVal
+              hasUpdates = true
+            } else if (!isLocalEmpty && isCloudEmpty) {
+              // 本地有，云端空 → 保留本地（不覆盖）
+              return
+            } else if (!isLocalEmpty && !isCloudEmpty) {
+              // 都有数据 → 用云端（权威备份）
+              updates[field] = cloudVal
               hasUpdates = true
             }
           })
