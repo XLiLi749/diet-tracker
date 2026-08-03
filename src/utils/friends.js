@@ -57,11 +57,19 @@ export const handleFriendRequest = async (friendshipId, accept) => {
   const db = await getDb()
   if (!db) throw new Error('云开发未初始化，请检查网络或稍后重试')
 
-  await db.collection('friendships').doc(friendshipId).update({
-    status: accept ? 'accepted' : 'rejected',
-    handledAt: new Date().toISOString(),
-  })
-  return true
+  console.log('[处理好友请求] friendshipId=' + friendshipId + ', accept=' + accept)
+  try {
+    await db.collection('friendships').doc(friendshipId).update({
+      status: accept ? 'accepted' : 'rejected',
+      handledAt: new Date().toISOString(),
+    })
+    console.log('[处理好友请求] 成功')
+    return true
+  } catch (e) {
+    console.error('[处理好友请求] 失败:', e)
+    console.error('[处理好友请求] 请检查腾讯云控制台 friendships 集合权限：应设置为「所有用户可读，仅创建者可写」或「所有用户可读写」')
+    throw new Error('操作失败：' + (e.message || '权限不足，请检查数据库权限设置'))
+  }
 }
 
 // ============================================================

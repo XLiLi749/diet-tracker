@@ -280,7 +280,7 @@ export default function FeedPage() {
   const handleDelete = async (feedId) => {
     if (!confirm('确定删除这条动态吗？')) return
     try {
-      await deleteFeed(feedId, currentUser.userId)
+      await deleteFeed(feedId, currentUser.userId, currentUser.username)
       loadFeed(currentUser.userId)
     } catch (e) {
       setMessage(e.message)
@@ -342,7 +342,10 @@ export default function FeedPage() {
         ) : (
           feeds.map(feed => {
             const isLiked = (feed.likes || []).some(l => String(l.userId) === String(currentUser?.userId))
-            const isMine = String(feed.userId) === String(currentUser?.userId)
+            // 双重判断：优先 userId，其次 username（兼容老数据）
+            const isMineByUserId = feed.userId && String(feed.userId) === String(currentUser?.userId)
+            const isMineByUsername = feed.username && currentUser?.username && feed.username === currentUser.username
+            const isMine = isMineByUserId || isMineByUsername
             return (
               <div key={feed.id} className="bg-white rounded-2xl shadow-sm overflow-hidden">
                 {/* 用户信息 */}

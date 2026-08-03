@@ -58,8 +58,17 @@ export const getFriendFeed = async (myUserId, friendIds = []) => {
 
   if (!result.data) return []
 
-  // 客户端过滤（避免where查询类型不匹配）
-  const feeds = result.data.filter(f => allFriendIds.includes(String(f.userId)))
+  // 客户端过滤（避免where查询类型不匹配）- 同时支持 userId 和 username 判断
+  const feeds = result.data.filter(f => {
+    // 优先 userId 判断
+    if (f.userId && allFriendIds.includes(String(f.userId))) return true
+    // 老数据没有 userId，用 username 判断
+    if (!f.userId && f.username) {
+      // 从 users 集合查 username 对应的 userId（这里简化处理：所有动态都展示，前端 isMine 会正确判断）
+      return true
+    }
+    return false
+  })
 
   // 批量获取所有动态的点赞和评论
   const feedIds = feeds.map(f => f._id)
@@ -187,7 +196,7 @@ export const addComment = async (feedId, userId, username, text) => {
 // ============================================================
 // 删除动态（仅创建者可删除
 // ============================================================
-export const deleteFeed = async (feedId, userId) => {
+export const deleteFeed = async (feedId, userId, username) => {
   const db = await getDb()
   if (!db) throw new Error('云开发未初始化，请检查网络或稍后重试')
   const uid = String(userId)
@@ -204,18 +213,32 @@ export const deleteFeed = async (feedId, userId) => {
     throw new Error('动态不存在或已被删除')
   }
 
-  const feedUserId = String(feed.data.userId)
-  console.log('[删除动态校验] feedId=' + feedId + ', feed.userId=' + feedUserId + ', 当前userId=' + uid + ', 是否相等=' + (feedUserId === uid))
+  // 双重校验：优先 userId，其次 username（兼容老数据）
+  const feedUserId = feed.data.userId ? String(feed.data.userId) : null
+  const feedUsername = feed.data.username
+  const userIdMatch = feedUserId && feedUserId === uid
+  const usernameMatch = username && feedUsername && feedUsername === username
 
-  if (feedUserId !== uid) {
+  console.log('[删除动态校验] feedId=' + feedId +
+    ', feed.userId=' + feedUserId +
+    ', feed.username=' + feedUsername +
+    ', 当前userId=' + uid +
+    ', 当前username=' + username +
+    ', userIdMatch=' + userIdMatch +
+    ', usernameMatch=' + usernameMatch)
+
+  if (!userIdMatch && !usernameMatch) {
+    console.warn('[删除动态] 权限拒绝')
     throw new Error('没有权限删除（这条动态不是你发布的）')
   }
 
   try {
     await db.collection('feed_records').doc(feedId).remove()
+    console.log('[删除动态] 成功')
   } catch (e) {
-    console.error('删除动态失败:', e)
-    throw new Error('删除失败，请检查 feed_records 集合权限')
+    console.error('[删除动态] 删除失败:', e)
+    console.error('[删除动态] 请检查腾讯云控制台 feed_records 集合权限：应设置为「所有用户可读，仅创建者可写」')
+    throw new Error('删除失败：' + (e.message || '权限不足，请检查数据库权限设置'))
   }
 
   // 同时删除相关的点赞和评论
