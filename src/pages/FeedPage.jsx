@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import dayjs from 'dayjs'
 import { getLoginState } from '../utils/auth'
@@ -11,6 +11,7 @@ import {
   deleteFeed,
 } from '../utils/feed'
 import { checkGoalAchieved, calcGoalStreak } from '../utils/goalCheck'
+import { compressImage, savePhoto, genPhotoId, getPhoto } from '../utils/photoStorage'
 import useStore from '../store'
 
 export default function FeedPage() {
@@ -28,6 +29,17 @@ export default function FeedPage() {
   const [commentMap, setCommentMap] = useState({}) // feedId -> input value
   const [showComments, setShowComments] = useState({}) // feedId -> true/false
   const [expandedFeeds, setExpandedFeeds] = useState({}) // feedId -> true/false
+
+  // ========== 图片相关状态 ==========
+  // 发布弹窗的图片
+  const [postPhotos, setPostPhotos] = useState([]) // [{id, src}]
+  const postFileRef = useRef(null)
+  // 分享弹窗的图片
+  const [sharePhotos, setSharePhotos] = useState([]) // [{id, src}]
+  const shareFileRef = useRef(null)
+  // 图片查看器
+  const [previewImage, setPreviewImage] = useState(null) // {src, index, total}
+  const [feedImageCache, setFeedImageCache] = useState({}) // photoId -> dataUrl
 
   // 分享弹窗状态
   const [showShareModal, setShowShareModal] = useState(false)
@@ -77,6 +89,7 @@ export default function FeedPage() {
   const openShareModal = () => {
     setHasEditedShareContent(false)
     setShareContent('')
+    setSharePhotos([])
     setShowShareModal(true)
   }
 
@@ -97,6 +110,18 @@ export default function FeedPage() {
       setFriendIds(ids)
       const feedData = await getFriendFeed(userId, ids)
       setFeeds(feedData)
+      // 预加载所有动态的图片
+      const allPhotoIds = []
+      feedData.forEach(f => {
+        if (f.photoIds && f.photoIds.length > 0) {
+          f.photoIds.forEach(pid => {
+            if (!feedImageCache[pid]) allPhotoIds.push(pid)
+          })
+        }
+      })
+      for (const pid of allPhotoIds) {
+        await getFeedImage(pid)
+      }
     } catch (e) {
       console.error('加载动态失败:', e)
     }
@@ -153,7 +178,7 @@ export default function FeedPage() {
   }
 
   // 通用发布逻辑
-  const doPost = async (content, withGoal = showGoalStatus) => {
+  const doPost = async (content, withGoal = showGoalStatus, photoIds = []) => {
     const records = getTodayRecords()
     const goalInfo = withGoal ? getTodayGoalInfo() : null
     await postFeed(
@@ -166,15 +191,18 @@ export default function FeedPage() {
         goalReached: goalInfo.achieved,
         targetCalories: goalInfo.targetCalories,
       } : {},
+      photoIds,
     )
   }
 
   const handlePost = async () => {
-    if (!postContent.trim()) return
+    if (!postContent.trim() && postPhotos.length === 0) return
     setLoading(true)
     try {
-      await doPost(postContent.trim(), showGoalStatus)
+      const photoIds = postPhotos.map(p => p.id)
+      await doPost(postContent.trim(), showGoalStatus, photoIds)
       setPostContent('')
+      setPostPhotos([])
       setShowPostModal(false)
       loadFeed(currentUser.userId)
       setMessage('发布成功！')
@@ -231,6 +259,7 @@ export default function FeedPage() {
         }
       }
 
+      const sharePhotoIds = sharePhotos.map(p => p.id)
       await postFeed(
         currentUser.userId,
         currentUser.username,
@@ -243,6 +272,7 @@ export default function FeedPage() {
           streakDays: streak,
           shareDate,
         } : { shareDate },
+        sharePhotoIds,
       )
 
       setShowShareModal(false)
@@ -285,6 +315,57 @@ export default function FeedPage() {
     } catch (e) {
       setMessage(e.message)
     }
+  }
+
+  // ========== 图片上传处理 ==========
+  const handlePhotoSelect = async (e, type = 'post') => {
+    const files = e.target.files
+    if (!files || files.length === 0) return
+    const setter = type === 'post' ? setPostPhotos : setSharePhotos
+    const current = type === 'post' ? postPhotos : sharePhotos
+    const remaining = 9 - current.length
+    const toProcess = Array.from(files).slice(0, remaining)
+
+    const newPhotos = []
+    for (const file of toProcess) {
+      try {
+        const reader = new FileReader()
+        const dataUrl = await new Promise((resolve, reject) => {
+          reader.onload = (ev) => resolve(ev.target.result)
+          reader.onerror = reject
+          reader.readAsDataURL(file)
+        })
+        // 压缩图片
+        const compressed = await compressImage(dataUrl, 1280, 0.8)
+        const photoId = genPhotoId()
+        // 保存到 IndexedDB
+        await savePhoto(photoId, compressed)
+        newPhotos.push({ id: photoId, src: compressed })
+      } catch (e) {
+        console.error('处理图片失败:', e)
+      }
+    }
+    setter(prev => [...prev, ...newPhotos])
+    // 清空 input 以便下次可以选相同文件
+    e.target.value = ''
+  }
+
+  const removePhoto = (photoId, type = 'post') => {
+    const setter = type === 'post' ? setPostPhotos : setSharePhotos
+    setter(prev => prev.filter(p => p.id !== photoId))
+  }
+
+  // 获取动态图片（带缓存）
+  const getFeedImage = async (photoId) => {
+    if (feedImageCache[photoId]) return feedImageCache[photoId]
+    try {
+      const url = await getPhoto(photoId)
+      if (url) {
+        setFeedImageCache(prev => ({ ...prev, [photoId]: url }))
+        return url
+      }
+    } catch (e) {}
+    return null
   }
 
   const formatTime = (isoStr) => {
@@ -373,6 +454,50 @@ export default function FeedPage() {
                 <div className="px-4 pb-3">
                   <p className="text-gray-700">{feed.content}</p>
                 </div>
+
+                {/* 九宫格图片展示 */}
+                {feed.photoIds && feed.photoIds.length > 0 && (
+                  <div className="px-4 pb-3">
+                    <div className={`grid gap-1 ${
+                      feed.photoIds.length === 1
+                        ? 'grid-cols-1'
+                        : feed.photoIds.length === 2
+                          ? 'grid-cols-2'
+                          : feed.photoIds.length === 4
+                            ? 'grid-cols-2'
+                            : 'grid-cols-3'
+                    }`}>
+                      {feed.photoIds.map((photoId, index) => {
+                        const imgSrc = feedImageCache[photoId]
+                        return (
+                          <div
+                            key={photoId} className={`relative overflow-hidden rounded-lg cursor-pointer group ${
+                              feed.photoIds.length === 1 ? 'aspect-[4/3] max-h-[400px]' : 'aspect-square'
+                            }`}>
+                              {imgSrc ? (
+                                <img
+                                  src={imgSrc}
+                                  alt={`动态图片 ${index + 1}`}
+                                  className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                                  onClick={() => setPreviewImage({
+                                    src: imgSrc,
+                                    index,
+                                    total: feed.photoIds.length,
+                                    photoIds: feed.photoIds,
+                                    currentIndex: index,
+                                  })}
+                                />
+                              ) : (
+                                <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+                                  <span className="text-gray-300 text-xs">加载中...</span>
+                                </div>
+                              )}
+                            </div>
+                          )
+                        })}
+                    </div>
+                  </div>
+                )}
 
                 {/* 目标达成标识 + 连续天数 */}
                 {feed.goalReached !== null && feed.goalReached !== undefined && (
@@ -495,6 +620,44 @@ export default function FeedPage() {
                 rows={3}
                 className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-amber-400 outline-none resize-none"
               />
+
+              {/* 图片上传区域 */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-gray-700">📷 美食照片（{postPhotos.length}/9）</span>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  {postPhotos.map((photo) => (
+                    <div key={photo.id} className="aspect-square relative rounded-lg overflow-hidden">
+                      <img src={photo.src} alt="" className="w-full h-full object-cover" />
+                      <button
+                        onClick={() => removePhoto(photo.id, 'post')}
+                        className="absolute top-1 right-1 w-6 h-6 bg-black/60 text-white rounded-full text-xs flex items-center justify-center"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                  {postPhotos.length < 9 && (
+                    <button
+                      onClick={() => postFileRef.current?.click()}
+                      className="aspect-square border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center text-gray-400 hover:border-amber-400 hover:text-amber-500 transition-colors"
+                    >
+                      <span className="text-2xl">+</span>
+                      <span className="text-xs mt-1">添加照片</span>
+                    </button>
+                  )}
+                </div>
+                <input
+                  ref={postFileRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => handlePhotoSelect(e, 'post')}
+                />
+              </div>
+
               <div className="bg-amber-50 rounded-xl p-3 space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">📋 今日记录</span>
@@ -523,7 +686,7 @@ export default function FeedPage() {
               </div>
               <button
                 onClick={handlePost}
-                disabled={loading || !postContent.trim()}
+                disabled={loading || (!postContent.trim() && postPhotos.length === 0)}
                 className="w-full py-4 bg-gradient-to-r from-amber-400 to-orange-400 text-white font-bold rounded-xl disabled:opacity-50"
               >
                 {loading ? '发布中...' : '发布动态'}
@@ -640,6 +803,43 @@ export default function FeedPage() {
                 </label>
               </div>
 
+              {/* 图片上传区域 */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-gray-700">📷 美食照片（{sharePhotos.length}/9）</span>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  {sharePhotos.map((photo) => (
+                    <div key={photo.id} className="aspect-square relative rounded-lg overflow-hidden">
+                      <img src={photo.src} alt="" className="w-full h-full object-cover" />
+                      <button
+                        onClick={() => removePhoto(photo.id, 'share')}
+                        className="absolute top-1 right-1 w-6 h-6 bg-black/60 text-white rounded-full text-xs flex items-center justify-center"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                  {sharePhotos.length < 9 && (
+                    <button
+                      onClick={() => shareFileRef.current?.click()}
+                      className="aspect-square border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center text-gray-400 hover:border-amber-400 hover:text-amber-500 transition-colors"
+                    >
+                      <span className="text-2xl">+</span>
+                      <span className="text-xs mt-1">添加照片</span>
+                    </button>
+                  )}
+                </div>
+                <input
+                  ref={shareFileRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => handlePhotoSelect(e, 'share')}
+                />
+              </div>
+
               {/* 可编辑的预览文案 */}
               <div className="bg-gray-50 rounded-xl p-3">
                 <div className="flex justify-between items-center mb-2">
@@ -675,6 +875,67 @@ export default function FeedPage() {
               )}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ========== 全屏图片预览 ========== */}
+      {previewImage && (
+        <div
+          className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center"
+          onClick={() => setPreviewImage(null)}
+        >
+          {/* 关闭按钮 */}
+          <button
+            onClick={() => setPreviewImage(null)}
+            className="absolute top-4 right-4 w-10 h-10 flex items-center justify-center text-white text-3xl z-10 hover:bg-white/10 rounded-full"
+          >
+            ×
+          </button>
+
+          {/* 当前图片 */}
+          <img
+            src={previewImage.src}
+            alt={`图片 ${previewImage.currentIndex + 1}`}
+            className="max-w-[92vw] max-h-[80vh] object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
+
+          {/* 左切换 */}
+          {previewImage.photoIds && previewImage.photoIds.length > 1 && previewImage.currentIndex > 0 && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                const newIndex = previewImage.currentIndex - 1
+                const newSrc = feedImageCache[previewImage.photoIds[newIndex]]
+                setPreviewImage({ ...previewImage, currentIndex: newIndex, src: newSrc })
+              }}
+              className="absolute left-4 w-10 h-10 flex items-center justify-center text-white text-2xl bg-black/40 rounded-full hover:bg-black/60"
+            >
+              ‹
+            </button>
+          )}
+
+          {/* 右切换 */}
+          {previewImage.photoIds && previewImage.photoIds.length > 1 && previewImage.currentIndex < previewImage.photoIds.length - 1 && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                const newIndex = previewImage.currentIndex + 1
+                const newSrc = feedImageCache[previewImage.photoIds[newIndex]]
+                setPreviewImage({ ...previewImage, currentIndex: newIndex, src: newSrc })
+              }}
+              className="absolute right-4 w-10 h-10 flex items-center justify-center text-white text-2xl bg-black/40 rounded-full hover:bg-black/60"
+            >
+              ›
+            </button>
+          )}
+
+          {/* 页码 */}
+          {previewImage.photoIds && (
+            <div className="absolute bottom-6 text-white text-sm bg-black/40 px-3 py-1 rounded-full">
+              {previewImage.currentIndex + 1} / {previewImage.photoIds.length}
+            </div>
+          )}
         </div>
       )}
     </div>
